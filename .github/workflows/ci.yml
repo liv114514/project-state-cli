@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24]
+    env:
+      REQUIRE_SQLITE_TESTS: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Provision sqlite3 CLI (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q sqlite3
+      - name: Provision sqlite3 CLI (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install sqlite -y --no-progress
+      - name: Provision sqlite3 CLI (macOS)
+        if: runner.os == 'macOS'
+        run: brew install sqlite
+      - name: Record tool versions and require SQLite
+        shell: bash
+        run: |
+          node --version
+          npm --version
+          git --version
+          command -v sqlite3
+          sqlite3 --version
+      - name: Verify package and runtime versions
+        run: npm run check:version
+      - name: Run serial test suite with real SQLite required
+        run: npm test
+      - name: Verify npm package allowlist
+        run: npm run pack:check
+      - name: Install and exercise the generated package offline
+        run: npm run test:install
