@@ -11,7 +11,7 @@
 - A real `sqlite3` CLI for SQLite collection and strict database tests.
 - No runtime npm dependencies. Git, SQLite, filesystem behavior, and platform support still matter.
 
-This repository starts with the private local candidate `1.4.0-rc.8`. It has not been published to npm and is not a release.
+This repository starts with the private local candidate `1.4.0-rc.9`. It has not been published to npm and is not a release.
 
 ## Run from a source checkout
 
@@ -37,7 +37,7 @@ This pre-release is not available from the npm registry. From a checkout, build 
 
 ```sh
 npm pack
-npm install --prefix ./tool-prefix --ignore-scripts --no-audit --no-fund ./project-state-snapshot-1.4.0-rc.8.tgz
+npm install --prefix ./tool-prefix --ignore-scripts --no-audit --no-fund ./project-state-snapshot-1.4.0-rc.9.tgz
 node ./tool-prefix/node_modules/project-state-snapshot/bin/project-state.js help
 ```
 
@@ -69,7 +69,7 @@ The value is synthetic and is never committed. Local private artifacts are plain
 - Restore accepts validated snapshot schema v2 artifacts. Schema v1 is diagnostic-only; unknown future formats are refused.
 - Git restore is limited to supported ordinary repositories with a clean index and worktree and complete protection for every overwritten target. Uncommitted source, staged changes, and untracked files are not general backup objects. `--force` cannot bypass an unsafe or uncertain state. Branch refs are not moved.
 - `--only config,deps,runtime` is a constrained file-layer restore; it does not switch Git or restore databases/Docker state.
-- SQLite row data is collected only with explicit `snapshot --with-seed` and a real SQLite CLI. Full backups are private. Restore can create a missing target only; an existing database or sidecar is refused. Schema-only observations do not restore rows. SQL text is recorded only and never executed.
+- SQLite row data is collected only with explicit `snapshot --with-seed` and a real SQLite CLI. If a supported database is found but its backup fails, `--with-seed` exits unsuccessfully and does not publish a generation; ordinary snapshots may save with the database layer explicitly marked skipped. Full backups are private. Restore can create a missing target only; an existing database or sidecar is refused. Schema-only observations do not restore rows. SQL text is recorded only and never executed.
 - Docker is record-only. Dependencies are observed, not installed or switched. No command starts an application or restores running containers, services, volumes, or machine state.
 - Private storage is local plaintext. Hashes detect changes but do not authenticate a snapshot author.
 

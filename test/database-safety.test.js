@@ -6,13 +6,14 @@ const fs = require('fs');
 const fsp = fs.promises;
 const os = require('os');
 const path = require('path');
+const { execFileSync } = require('node:child_process');
 const U = require('../lib/utils');
 const DB = require('../lib/database');
 const RestoreDb = require('../lib/restore-database');
 const Collectors = require('../lib/collectors');
 const Snapshot = require('../lib/snapshot');
 const Store = require('../lib/storage');
-const { removeTemporaryTree } = require('./helpers');
+const { removeTemporaryTree, HAS_SQLITE } = require('./helpers');
 
 const generation = 'a'.repeat(32);
 const schema = { fingerprint: 'f'.repeat(64), tables: ['items'] };
@@ -192,6 +193,46 @@ test('collector stores SQL as private record-only and creates binary backup only
   assert.deepEqual(await fsp.readdir(path.join(project.root, '.project-state', 'staging')), [], 'collector removes its private temporary generation');
 });
 
+(HAS_SQLITE ? test : test.skip)('SQLite collector shortens private staging for Windows journal paths and refuses unsupported lengths before write', async (t) => {
+  const tempBase = await fsp.mkdtemp(path.join(os.tmpdir(), 'pss-db-stage-limit-'));
+  t.after(() => removeTemporaryTree(tempBase));
+  const operationId = '8'.repeat(32);
+  const dbId = 'c4a173e8-0210-4b10-8c7d-0ab6e8080eff';
+  const backupName = 'backup-0-5a78c72b-2ca2-4f37-bb10-920ac2613e08.sqlite';
+  const legacySuffix = path.join('.project-state', 'staging', operationId, 'private', `db-collect-${dbId}`, `${backupName}-journal`);
+  const desiredRootLength = 262 - legacySuffix.length - 1;
+  const componentLength = Math.max(1, desiredRootLength - tempBase.length - 1);
+  const root = path.join(tempBase, 'r'.repeat(componentLength));
+  await fsp.mkdir(root, { recursive: true });
+  const source = path.join(root, 'app.db');
+  execFileSync('sqlite3', [source, "CREATE TABLE marker(value TEXT); INSERT INTO marker VALUES ('long-stage-marker');"], { cwd: root, env: process.env });
+
+  const legacyDirectory = path.join(root, '.project-state', 'staging', operationId, 'private', `db-collect-${dbId}`);
+  await fsp.mkdir(legacyDirectory, { recursive: true });
+  const legacyDestination = path.join(legacyDirectory, backupName);
+  const legacyJournalPath = `${legacyDestination}-journal`;
+  if (process.platform === 'win32') {
+    assert.equal(legacyJournalPath.length, 262, 'fixture reproduces the independently observed 254-character database path plus SQLite journal suffix');
+    await assert.rejects(() => DB.createConsistentBackup(root, source, legacyDestination), /Windows SQLite journal path limit/);
+    assert.equal(fs.existsSync(legacyDestination), false, 'overlong path is rejected before SQLite creates a partial backup');
+  }
+
+  const ctx = { root, files: [], results: {}, withSeed: true, operationId };
+  const collected = await DB.collectSqliteFiles(ctx, ['app.db']);
+  assert.equal(collected.status, 'collected');
+  assert.equal(collected.data.withSeed, true);
+  assert.equal(collected.data.databases[0].totalRows, 1);
+  const backup = ctx.files.find((entry) => entry.kind === 'sqlite-backup');
+  assert.ok(Buffer.isBuffer(backup.content));
+  const restored = path.join(root, 'verified-copy.db');
+  await fsp.writeFile(restored, backup.content, { flag: 'wx' });
+  assert.equal(execFileSync('sqlite3', [restored, 'SELECT value FROM marker;'], { cwd: root, encoding: 'utf8' }).trim(), 'long-stage-marker');
+  assert.equal(execFileSync('sqlite3', [restored, 'PRAGMA integrity_check;'], { cwd: root, encoding: 'utf8' }).trim(), 'ok');
+
+  const privateParent = path.join(root, '.project-state', 'staging', operationId, 'priv');
+  assert.deepEqual(await fsp.readdir(privateParent), [], 'collector removes its own temporary database directory');
+});
+
 test('database collection failures keep private engine details out of public snapshot metadata', async (t) => {
   const project = await tempProject();
   t.after(project.dispose);
@@ -212,6 +253,36 @@ test('database collection failures keep private engine details out of public sna
   assert.doesNotMatch(publicReason, /PRIVATE_TABLE_MARKER|PRIVATE_SQL|C:\\\\private/);
   assert.doesNotMatch(publicManifest, /PRIVATE_TABLE_MARKER|PRIVATE_SQL|C:\\\\private/);
   assert.doesNotMatch(JSON.stringify(saved.manifest), /PRIVATE_TABLE_MARKER|PRIVATE_SQL|C:\\\\private/);
+
+  await assert.rejects(
+    () => Snapshot.snapshotInternal(project.root, 'seed-required-failure', { withSeed: true }),
+    (error) => error.code === 'EDATABASE_SEED_REQUIRED' && /row data was requested/.test(error.message),
+    'explicit seed capture refuses when an existing database cannot be backed up',
+  );
+  assert.equal(fs.existsSync(path.join(project.root, '.project-state', 'snapshots', 'seed-required-failure', 'current.json')), false, 'failed required capture publishes no generation');
+});
+
+test('database collection distinguishes no database from an unavailable SQLite CLI and honors explicit seed requests', async (t) => {
+  const project = await tempProject();
+  const noDatabase = await tempProject();
+  t.after(project.dispose);
+  t.after(noDatabase.dispose);
+  const originalResolve = U.resolveTrustedBinary;
+  U.resolveTrustedBinary = (name, root) => name === 'sqlite3' ? null : originalResolve(name, root);
+  t.after(() => { U.resolveTrustedBinary = originalResolve; });
+
+  const empty = await Collectors.collectDatabase({ root: noDatabase.root, withSeed: true, results: {}, files: [] });
+  assert.equal(empty.status, 'skipped');
+  assert.equal(empty.reason, 'No local SQLite database detected');
+
+  await fsp.writeFile(path.join(project.root, 'app.db'), 'synthetic database placeholder');
+  const ordinary = await Collectors.collectDatabase({ root: project.root, withSeed: false, results: {}, files: [] });
+  assert.equal(ordinary.status, 'skipped', 'ordinary snapshot may degrade when the optional SQLite CLI is unavailable');
+  assert.match(ordinary.reason, /sqlite3 CLI not found; 1 SQLite file\(s\) were not collected/);
+  await assert.rejects(
+    () => Collectors.collectDatabase({ root: project.root, withSeed: true, results: {}, files: [] }),
+    (error) => error.code === 'EDATABASE_SEED_REQUIRED' && /trusted sqlite3 CLI is unavailable/.test(error.message),
+  );
 });
 
 test('plan accepts only private v2 binary backup and validates bytes plus database metadata', async (t) => {

@@ -1,3 +1,11 @@
+## 1.4.0-rc.9 — local acceptance repair candidate; not published
+
+- Fixed Windows SQLite online backup staging paths that caused SQLite journal creation to exceed MAX_PATH; unsafe path lengths now fail before SQLite writes.
+- Preserved ordinary partial collection while making explicit `snapshot --with-seed` fail without publishing a generation when a discovered database cannot be captured.
+- Corrected Windows `.cmd` shim argument framing without enabling `shell:true`; CMD metacharacter-bearing inputs remain refused.
+- Corrected the Command Prompt rollback regression launcher to quote its batch path while continuing to execute the exact printed rollback command.
+- Added contract revision 21; public snapshot schema remains v2. Independent rc.8 upload-gate failures require final rc.9 source and install acceptance.
+
 ## 1.4.0-rc.8 — local repository-preparation candidate; not published
 
 - Bound file replay after Git checkout to the verified post-checkout filesystem state while retaining pre-restore bytes in the private safety generation.

@@ -556,7 +556,7 @@ test('C09 run honors caller maxBuffer bounds for trusted child output', async ()
 
 (process.platform === 'win32' ? test : test.skip)('sec1b: runTrusted refuses .cmd shims per CMD metacharacter, no process started', async () => {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-sec-cmd-'));
-  const shimDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-sec-cmd-shim-'));
+  const shimDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pss sec cmd shim '));
   try {
     fs.writeFileSync(path.join(proj, 'npm.cmd'), '@echo off\necho hijacked > cmd-hijacked.marker\n@echo 9.9.9\n', 'utf8');
     fs.writeFileSync(path.join(shimDir, 'npm.cmd'), '@echo off\necho external-shim > external-shim.marker\n@echo 9.9.9\n', 'utf8');

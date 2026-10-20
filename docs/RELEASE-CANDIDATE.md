@@ -1,20 +1,18 @@
-# Release candidate gate — 1.4.0-rc.8
+# Release candidate gate — 1.4.0-rc.9
 
-This is a private local repository-preparation candidate, not a release. Package/tool version: `1.4.0-rc.8`; contract revision 20; snapshot schema v2. The package version was advanced for restore transaction, comparison, hook, lock, and installed-package verification changes.
+Private local repair candidate only; not a release. Package/tool version `1.4.0-rc.9`, contract revision 21, snapshot schema v2. Local source/package upload gates passed on the isolated modified worktree. No push, remote repository creation, visibility change, Release, or npm publish is authorized or performed.
 
-| Gate | Status for this repository import |
+The prior rc.8 candidate did not pass the independent local upload gate. Its version and package-allowlist checks passed, but SQLite snapshot/installed seed restore failed and two Windows CMD tests failed. rc.9 is a separate repair candidate; its own final source, SQLite, pack and exact-tarball install results are recorded in the local handoff report and evidence bundle.
+
+| Gate | rc.9 status |
 |---|---|
-| Source tree and history | New source-only import history; no prior history is represented as if it belonged to the candidate |
-| Package/runtime version check | Passed locally; clean-checkout repetition remains part of final handoff |
-| CI version | Updated from stale rc.4 and action references pinned to reviewed release commits; hosted workflow not run |
-| Source tests on this import | Passed: 322 total, 321 pass, 0 fail, 1 explicit Windows symlink-capability skip; 0 cancelled/todo |
-| Real tarball install and installed CLI snapshot/restore/rollback | Passed via `npm run test:install` on an offline fresh prefix |
-| Strict real SQLite tests on this import | Passed 17/17 with `REQUIRE_SQLITE_TESTS=1`; installed SQLite seed restore and rollback also passed |
-| npm pack contents and tarball hash | Passed allowlist check (18 files); retained tarball path and SHA are in local evidence manifest |
-| Installed package CLI, restore and rollback | Passed via installed CLI; `sourceFallback=false`; file and SQLite exact rollback verified |
-| Windows symlink capability skip from prior candidate | Explicitly unverified; not silently converted to a pass |
-| Hosted Actions, Node/platform matrix | Not run before initial upload |
-| Non-author user trial and application health | Not verified |
-| Push, visibility change, Release or npm publish | Not performed; not authorized |
+| AT-01 SQLite staging and explicit seed outcome | Passed locally: strict SQLite 18/18; install package seed restore/integrity and rollback verified |
+| AT-02 Command Prompt printed rollback regression | Passed: full suite plus targeted CMD path regression; launcher quoting fixed without altering the printed rollback command |
+| AT-03 trusted `.cmd` shim with a spaced path | Targeted regression passed; marker checks establish the external shim ran and project-root shim did not |
+| Version and contract | Passed: `1.4.0-rc.9`, contract rev21, schema v2 |
+| npm allowlist and exact installed tarball | Passed: 18 files, 0 unexpected; exact tarball installed offline, no source fallback |
+| Full serial suite, strict real SQLite | Passed: 325 total / 324 pass / 0 fail / 1 explicit skip; SQLite 18/18 |
+| Hosted Actions, Node 22, Linux/macOS, ACL/filesystem matrix | Not run / unverified |
+| Independent user trial and application health | Not run / unverified |
 
-Do not use the rc.5 tarball or historical logs to satisfy this candidate's gates. The accompanying local delivery bundle contains the handoff evidence under `report/`; those machine-specific logs are intentionally not uploaded. This document does not claim hosted or cross-platform validation. The candidate remains local-only until the separate upload authorization step is complete.
+The rc.8 WAL attempt stopped at an environment `realpath` EPERM before database collection. rc.9 has new evidence from a real SQLite process with an open writer and uncheckpointed committed data; see the local handoff report. The old independent report and logs remain unchanged. This does not establish hosted or cross-platform behavior, and does not authorize any remote or public action.

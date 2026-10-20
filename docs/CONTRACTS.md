@@ -1,4 +1,4 @@
-# project-state contract revision 20 (snapshot schema v2)
+# project-state contract revision 21 (snapshot schema v2)
 
 Status: current implementation contract for snapshot and restore behavior. Code changes that alter fields or
 semantics require a versioned edit here and notice to every consumer before
@@ -605,3 +605,39 @@ operation's staging directory only when the resolver journal explicitly binds
 that `resolvesOperationId`. All paths and file identity/digest fields remain
 validated; unrelated operation staging paths are invalid. The snapshot schema
 remains v2.
+
+## Revision 21: SQLite staging path and explicit seed-capture outcome
+
+SQLite online backups remain private and are written under the operation's
+`.project-state/staging/<operationId>/priv/db-<randomId>/` directory. On
+Windows, the collector checks the generated backup's adjacent `-journal` path
+before starting sqlite3 and refuses the capture if that path reaches the
+legacy Windows SQLite path limit. It does not copy only the source main file,
+move a database into public snapshots, change the source journal mode, or
+checkpoint the source as a workaround. Temporary files are removed only from
+the exact staging directory created by the current collector operation.
+
+Database-layer outcomes have distinct meanings:
+
+- No local SQLite database or unsupported database configuration discovered:
+  ordinary collection marks the layer `skipped`. `snapshot --with-seed` may
+  commit only when no database configuration was detected; if it finds an
+  unsupported remote-database hint, it refuses rather than imply the requested
+  rows were saved.
+- Ordinary snapshot with a discovered database but no trusted sqlite3 CLI,
+  unavailable private staging, or failed online backup: the snapshot may
+  commit as a partial collection, with the database layer marked `skipped`
+  and a reason that says data was not collected. This does not claim database
+  recoverability.
+- `snapshot --with-seed` with a discovered supported SQLite database: any
+  discovery, tool, staging, or consistency-backup failure returns failure
+  (CLI exit code 2) and does not publish a generation. It cannot be reported
+  as a successful seed snapshot with missing rows.
+- A successful `--with-seed` capture contains the validated private binary
+  backup and schema metadata. Restore remains limited to creating a missing
+  target; it is not a general database replacement operation.
+
+This revision changes command/result semantics and private staging layout but
+does not change public snapshot schema v2. Snapshot-generation `state:
+complete` means the generation transaction committed; per-layer statuses
+remain authoritative for what was actually collected.

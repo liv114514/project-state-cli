@@ -313,8 +313,9 @@ test('Command Prompt rollback survives percent and exclamation characters in the
     // child do not inherit the test runner's output handles.
     fs.writeFileSync(batchFile, `@echo off\r\n${commandLine} >> "${outputFile}" 2>&1\r\n`, 'utf8');
     const psQuote = (value) => `'${value.replace(/'/g, "''")}'`;
+    const cmdBatchArgument = `"${batchFile.replace(/"/g, '""')}"`;
     fs.writeFileSync(launcherFile,
-      `$p = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/c', ${psQuote(batchFile)}) -WorkingDirectory ${psQuote(root)} -Wait -PassThru -NoNewWindow\nexit $p.ExitCode\n`,
+      `$p = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/c', ${psQuote(cmdBatchArgument)}) -WorkingDirectory ${psQuote(root)} -Wait -PassThru -NoNewWindow\nexit $p.ExitCode\n`,
       'utf8');
     const rollback = spawnSync(powershellPath, ['-NoProfile', '-NonInteractive', '-File', launcherFile], { stdio: 'ignore', timeout: 30000 });
     const rollbackOutput = fs.existsSync(outputFile) ? read(outputFile).toString('utf8') : '';

@@ -1,6 +1,6 @@
-# Current design summary — 1.4.0-rc.8
+# Current design summary — 1.4.0-rc.9
 
-The implementation contract is [CONTRACTS.md](CONTRACTS.md), revision 20 (public snapshot schema v2). Do not edit its fields or semantics without a versioned contract change and notice to consumers. This document summarizes the design; it does not replace the contract or platform-specific evidence. Current import validation is tracked separately from historical candidate evidence in [ACCEPTANCE.md](ACCEPTANCE.md).
+The implementation contract is [CONTRACTS.md](CONTRACTS.md), revision 21 (public snapshot schema v2). Do not edit its fields or semantics without a versioned contract change and notice to consumers. This document summarizes the design; it does not replace the contract or platform-specific evidence. Current import validation is tracked separately from historical candidate evidence in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Snapshot model
 
@@ -20,7 +20,7 @@ Restore results distinguish refusal, verified restoration, failure with verified
 
 ## SQLite boundary
 
-SQLite collection uses a trusted CLI online backup mechanism. `--with-seed` is explicit consent to store a complete consistent private binary backup. Schema, row counts, and integrity metadata describe that backup. SQL/schema text and row metadata are record-only and are never executed.
+SQLite collection uses a trusted CLI online backup mechanism in short, private operation staging. `--with-seed` is explicit consent to store a complete consistent private binary backup; if a discovered database cannot be captured, that command fails without publishing a generation. Ordinary snapshot may continue with a clearly skipped database layer. Schema, row counts, and integrity metadata describe a successful backup. SQL/schema text and row metadata are record-only and are never executed.
 
 Restore can create a missing database target from a validated private binary. It refuses to replace any existing database or target with `-wal`, `-shm`, or `-journal` sidecars. It verifies the created file, expected schema/row metadata, digest, and `PRAGMA integrity_check`. There is no schema-only database restore and no general database replacement.
 

@@ -11,7 +11,7 @@
 - SQLite 采集和严格数据库测试需要真实 `sqlite3` CLI。
 - 工具没有运行时 npm 依赖，但仍依赖 Git、SQLite、文件系统行为和平台支持。
 
-本仓库从私有本地候选 `1.4.0-rc.8` 整理而来。该版本尚未发布到 npm，也不是正式发布。
+本仓库从私有本地候选 `1.4.0-rc.9` 整理而来。该版本尚未发布到 npm，也不是正式发布。
 
 ## 从源码运行
 
@@ -37,7 +37,7 @@ Remove-Item Env:REQUIRE_SQLITE_TESTS
 
 ```sh
 npm pack
-npm install --prefix ./tool-prefix --ignore-scripts --no-audit --no-fund ./project-state-snapshot-1.4.0-rc.8.tgz
+npm install --prefix ./tool-prefix --ignore-scripts --no-audit --no-fund ./project-state-snapshot-1.4.0-rc.9.tgz
 node ./tool-prefix/node_modules/project-state-snapshot/bin/project-state.js help
 ```
 
@@ -69,7 +69,7 @@ node /path/to/project-state/bin/project-state.js restore demo-before --only conf
 - 恢复只接受通过校验的 snapshot schema v2 工件。schema v1 仅用于诊断，未知未来格式会被拒绝。
 - Git 恢复限于受支持的普通仓库、干净的 index/工作区，以及每个覆盖目标均有完整保护的情况。未提交源码、暂存改动和 untracked 文件不是通用备份对象。`--force` 不能绕过不安全或不确定状态。工具不会移动分支引用。
 - `--only config,deps,runtime` 是受限文件层恢复，不切换 Git，也不恢复数据库或 Docker 状态。
-- 只有显式使用 `snapshot --with-seed` 且有真实 SQLite CLI 时，才采集数据库行数据。完整备份属于私密数据。恢复只能创建缺失目标；已有数据库或 sidecar 会被拒绝。schema-only 不恢复行数据。SQL 文本只记录、绝不执行。
+- 只有显式使用 `snapshot --with-seed` 且有真实 SQLite CLI 时，才采集数据库行数据。发现受支持数据库但备份失败时，`--with-seed` 会失败且不发布快照代；普通快照可以继续，但会明确把数据库层标为 skipped。完整备份属于私密数据。恢复只能创建缺失目标；已有数据库或 sidecar 会被拒绝。schema-only 不恢复行数据。SQL 文本只记录、绝不执行。
 - Docker 仅记录观察结果。工具观察依赖，但不会安装或切换依赖，不启动应用，也不恢复容器、服务、卷或机器状态。
 - 私密存储是本机明文。哈希用于发现变化，不认证快照作者。
 

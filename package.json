@@ -1,6 +1,6 @@
 {
   "name": "project-state-snapshot",
-  "version": "1.4.0-rc.8",
+  "version": "1.4.0-rc.9",
   "description": "Record local project state, compare drift, and restore explicitly supported artifacts.",
   "bin": {
     "project-state": "bin/project-state.js"

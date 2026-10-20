@@ -13,6 +13,37 @@ const U = require('../lib/utils');
 const Storage = require('../lib/storage');
 const RestoreDb = require('../lib/restore-database');
 
+test('CLI distinguishes optional database omission from a failed explicit --with-seed request', async (t) => {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-db-seed-required-'));
+  t.after(() => fs.rmSync(proj, { recursive: true, force: true }));
+  const target = path.join(proj, 'app.db');
+  const sourceBytes = Buffer.from('synthetic database placeholder');
+  fs.writeFileSync(target, sourceBytes);
+  const system32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
+  const childEnv = { ...process.env, PATH: system32 };
+  const cliPath = path.resolve(__dirname, '..', 'bin', 'project-state.js');
+
+  const required = spawnSync(process.execPath, [cliPath, 'snapshot', 'required-seed', '--with-seed'], {
+    cwd: proj, env: childEnv, encoding: 'utf8', timeout: 30000,
+  });
+  assert.equal(required.status, 2, `${required.stdout}\n${required.stderr}`);
+  assert.match(`${required.stdout}\n${required.stderr}`, /row data was requested.*sqlite3 CLI is unavailable/i);
+  assert.doesNotMatch(required.stdout, /generation .* saved/i);
+  assert.deepEqual(fs.readFileSync(target), sourceBytes, 'explicit seed failure leaves the source database unchanged');
+  assert.equal(fs.existsSync(path.join(proj, '.project-state', 'snapshots', 'required-seed', 'current.json')), false, 'explicit seed failure publishes no current generation');
+
+  const optional = spawnSync(process.execPath, [cliPath, 'snapshot', 'optional-database'], {
+    cwd: proj, env: childEnv, encoding: 'utf8', timeout: 30000,
+  });
+  assert.equal(optional.status, 0, `${optional.stdout}\n${optional.stderr}`);
+  assert.match(optional.stdout, /database\s+skipped\s+sqlite3 CLI not found; 1 SQLite file\(s\) were not collected/i);
+  assert.ok(fs.existsSync(path.join(proj, '.project-state', 'snapshots', 'optional-database', 'current.json')), 'ordinary capture may commit with an explicitly skipped database layer');
+  assert.deepEqual(fs.readFileSync(target), sourceBytes, 'optional partial capture also leaves the source database unchanged');
+  const inspected = await Storage.validateSnapshot(proj, 'optional-database', { mode: 'diagnostic' });
+  assert.equal(inspected.manifest.layers.database.status, 'skipped');
+  assert.match(inspected.manifest.layers.database.reason, /sqlite3 CLI not found/);
+});
+
 (HAS_SQLITE ? test : test.skip)('db compare binds live schema digest and detects same-row-count schema drift', async (t) => {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-db-schema-compare-'));
   t.after(() => fs.rmSync(proj, { recursive: true, force: true }));

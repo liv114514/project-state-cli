@@ -6,6 +6,7 @@
 - Local private artifacts are plaintext. The tool does not encrypt them or provide access control. Hashes do not authenticate the snapshot author.
 - Schema v1 is diagnostic-only and is not migrated or automatically deleted. Unknown future schema versions are refused.
 - SQLite schema-only capture does not restore rows. Row capture requires `--with-seed` and a real SQLite CLI. Restore only creates a missing target; existing databases and sidecars are refused.
+- Windows SQLite staging preflights the generated backup's temporary journal path and refuses lengths at the legacy path limit. A refusal is explicit: ordinary optional collection may commit with the database layer marked skipped, while a requested `--with-seed` capture fails without publishing a generation.
 - SQL is recorded, never executed. No database engine other than the supported SQLite CLI path is claimed.
 - Docker data/runtime is record-only. Dependencies are not installed or switched.
 - Recovery does not automatically restart an app. Correct restored files do not establish app health.
