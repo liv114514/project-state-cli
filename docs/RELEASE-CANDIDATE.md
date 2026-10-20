@@ -17,4 +17,4 @@ This is a private local repository-preparation candidate, not a release. Package
 | Non-author user trial and application health | Not verified |
 | Push, visibility change, Release or npm publish | Not performed; not authorized |
 
-Do not use the rc.5 tarball or historical logs to satisfy this candidate's gates. `evidence/FINAL-ACCEPTANCE.md` is the local handoff evidence source. This document does not claim hosted or cross-platform validation. The candidate remains local-only until the separate upload authorization step is complete.
+Do not use the rc.5 tarball or historical logs to satisfy this candidate's gates. The accompanying local delivery bundle contains the handoff evidence under `report/`; those machine-specific logs are intentionally not uploaded. This document does not claim hosted or cross-platform validation. The candidate remains local-only until the separate upload authorization step is complete.
