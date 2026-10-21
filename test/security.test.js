@@ -544,7 +544,7 @@ test('C09 run honors caller maxBuffer bounds for trusted child output', async ()
     await git(proj, ['commit', '-m', 'drift']);
     const r = await cli(proj, ['restore', 'good', '--yes']);
     assert.strictEqual(r.status, 1, 'restore refused');
-    assert.ok(r.stderr.includes('symlink/reparse'), 'refusal names the link boundary');
+    assert.ok(r.stderr.includes('link/reparse point inside generation'), 'refusal names the link boundary');
     assert.ok(!r.stdout.includes('LEAK-ME'), 'outside content never read');
     fs.rmSync(outside, { recursive: true, force: true });
   } finally {

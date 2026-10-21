@@ -26,6 +26,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
+      - name: Use a canonical runner temp directory
+        shell: bash
+        run: |
+          node -e 'const fs=require("node:fs"); const p=fs.realpathSync.native(process.env.RUNNER_TEMP); for (const k of ["TMPDIR","TMP","TEMP"]) process.stdout.write(k+"="+p+"\n")' >> "$GITHUB_ENV"
       - name: Provision sqlite3 CLI (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update -q && sudo apt-get install -y -q sqlite3
@@ -44,6 +48,7 @@ jobs:
           git --version
           command -v sqlite3
           sqlite3 --version
+          node -e 'const fs=require("node:fs"); const os=require("node:os"); const path=require("node:path"); const p=os.tmpdir(); if (path.resolve(p)!==path.resolve(fs.realpathSync.native(p))) process.exit(1); console.log("canonical temp directory verified")'
       - name: Verify package and runtime versions
         run: npm run check:version
       - name: Run serial test suite with real SQLite required
