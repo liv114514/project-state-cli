@@ -2,6 +2,8 @@
 
 **记录选定的本地项目状态、比较变化，并恢复有明确边界的一部分。**
 
+**English:** [Read the English documentation](README.md).
+
 `project-state` 是本地 Node.js 命令行工具。快照记录选定文件和元数据；它不是完整机器备份、应用健康检查或通用工作区恢复系统。
 
 ## 环境要求

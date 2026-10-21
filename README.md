@@ -2,6 +2,8 @@
 
 **Record selected local project state, compare drift, and restore a deliberately limited subset.**
 
+**简体中文简介：** project-state 是一款本地命令行工具，用于记录选定的项目状态、比较变化，并在通过安全校验时恢复明确支持的工件。它不是完整备份或应用健康检查工具，也不会自动重启应用。详见[中文版文档](README.zh-CN.md)。
+
 `project-state` is a local Node.js command-line tool. A snapshot is an observation of selected files and metadata; it is not a full machine backup, application health check, or general workspace recovery system.
 
 ## Requirements
