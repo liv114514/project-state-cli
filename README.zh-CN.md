@@ -1,78 +1,84 @@
 # project-state
 
-**记录选定的本地项目状态、比较变化，并恢复有明确边界的一部分。**
+**记录选定的项目状态、比较变化，并恢复明确支持的一部分工件。**
 
 **English:** [Read the English documentation](README.md).
 
-`project-state` 是本地 Node.js 命令行工具。快照记录选定文件和元数据；它不是完整机器备份、应用健康检查或通用工作区恢复系统。
+project-state 是本地 Node.js 命令行工具。它帮助开发者保存选定的项目状态、查看差异，并在通过安全检查时恢复受支持的工件。它不是完整备份或应用健康检查工具，也不会自动重启应用。
 
-## 环境要求
+## 当前状态与环境要求
 
-- Node.js 22 或更高版本。
-- Git：用于采集 Git 状态及支持范围内的 Git 恢复。
-- SQLite 采集和严格数据库测试需要真实 `sqlite3` CLI。
-- 工具没有运行时 npm 依赖，但仍依赖 Git、SQLite、文件系统行为和平台支持。
+当前候选版本为 `1.4.0-rc.11`，尚未发布到 npm。公共契约仍为 revision 21，快照格式仍为 schema v2。需要 Node.js 22 或更高版本及 Git。采集 SQLite 行数据和严格数据库测试需要真实 `sqlite3` CLI。工具没有运行时 npm 依赖，但仍受文件系统和平台行为影响。
 
-本仓库从私有本地候选 `1.4.0-rc.9` 整理而来。该版本尚未发布到 npm，也不是正式发布。
+## 从这里开始
 
-## 从源码运行
+在源码检出根目录查看命令和本机状态：
 
 ```sh
 node bin/project-state.js help
-npm run check:version
-REQUIRE_SQLITE_TESTS=1 npm test
+node bin/project-state.js doctor
 ```
 
-PowerShell 严格测试：
+日常使用不需要先运行完整测试套件。
+
+## 运行一次性体验
+
+在源码检出根目录运行：
+
+```sh
+npm run demo
+```
+
+体验脚本会在操作系统临时目录自动创建一个一次性合成 Git 项目，写入虚构 `.env`，保存快照、比较变化、预览并恢复，然后执行 CLI 原样打印的回退命令，并逐字节验证 A → B → A → B。它不会修改当前项目，也不验证应用健康或真实业务数据。失败时会保留带身份标记的演示目录供检查。
+
+演示脚本也包含在本地 tarball 中。安装到独立 prefix 后，可在该包目录运行 `npm run demo`；脚本仍会使用另一个临时项目。CLI 安装路径示例见下文。
+
+## 保存、比较、预览和恢复
+
+以下命令要求当前目录是目标项目根目录。把工具路径替换为源码检出目录或安装 prefix。配置文件必须先被 Git 排除；在写入任何敏感值前先检查。若检查没有显示匹配规则，应先设置并提交忽略规则，再继续。工具不会替你编辑配置。
+
+PowerShell，使用源码检出：
 
 ```powershell
-$env:REQUIRE_SQLITE_TESTS = '1'
-npm test
-Remove-Item Env:REQUIRE_SQLITE_TESTS
+$toolRoot = 'C:\path\to\project-state' # 替换为源码检出目录
+$cli = Join-Path $toolRoot 'bin\project-state.js'
+git check-ignore -- .env
+node $cli doctor
+node $cli snapshot before-config-change
+# 使用日常编辑器修改本地配置。
+node $cli compare before-config-change
+node $cli restore before-config-change --only config --dry-run
+# 检查当前计划后，明确授权写入：
+node $cli restore before-config-change --only config --yes
 ```
 
-严格模式要求当前进程 `PATH` 中存在真实 `sqlite3`；缺失时数据库测试会失败，不会静默跳过。
-
-## 安装确切的本地 tarball
-
-此预发布版本尚不存在于 npm registry。可在源码检出目录生成本地 tarball，并安装到独立 prefix：
+Bash，使用源码检出：
 
 ```sh
-npm pack
-npm install --prefix ./tool-prefix --ignore-scripts --no-audit --no-fund ./project-state-snapshot-1.4.0-rc.9.tgz
-node ./tool-prefix/node_modules/project-state-snapshot/bin/project-state.js help
+TOOL_ROOT='/path/to/project-state' # 替换为源码检出目录
+CLI="$TOOL_ROOT/bin/project-state.js"
+git check-ignore -- .env
+node "$CLI" doctor
+node "$CLI" snapshot before-config-change
+# 使用日常编辑器修改本地配置。
+node "$CLI" compare before-config-change
+node "$CLI" restore before-config-change --only config --dry-run
+# 检查当前计划后，明确授权写入：
+node "$CLI" restore before-config-change --only config --yes
 ```
 
-如果不希望更改受保护项目文件，请将 prefix 放在项目之外。不要对尚未发布的版本使用 registry 安装命令。
+安装本地 tarball 时，将 CLI 路径设为 `tool-prefix/node_modules/project-state-snapshot/bin/project-state.js`（按平台使用路径分隔符）。请把确切 tarball 安装到独立 prefix；当前候选尚未发布到 npm registry。恢复后工具会校验文件字节，但不会重启应用或验证应用健康。如果 CLI 打印了精确回退命令，请在同一项目根目录原样执行，不要手工改写。
 
-## 一次性配置示例
+## 操作拒绝或中断时
 
-使用临时 Git 项目和明确虚构的值。先提交忽略规则，再创建本地配置：
+先用 `project-state list` 查看快照，再用 `compare` 和 `restore --dry-run` 检查受支持状态。事务中断时，使用 CLI 显示的 operation ID 执行 `recover <operationId> --inspect`。如果检查拒绝继续或报告状态不明确，请保留锁、日志、安全 pin 和引用的快照数据。不要删除数据库或 sidecar、不要移除锁、不要 reset/stash 用户改动，也不要用 `--force` 绕过拒绝。
 
-```sh
-mkdir project-state-demo && cd project-state-demo
-git init
-git config user.name Demo
-git config user.email demo@example.invalid
-printf '.env\n.project-state/\n' > .gitignore
-git add .gitignore && git commit -m "Add local-state ignore rules"
-printf 'APP_MODE=example-only\n' > .env
-node /path/to/project-state/bin/project-state.js snapshot demo-before
-printf 'APP_MODE=changed-example-only\n' > .env
-node /path/to/project-state/bin/project-state.js compare demo-before
-node /path/to/project-state/bin/project-state.js restore demo-before --only config --dry-run
-node /path/to/project-state/bin/project-state.js restore demo-before --only config --yes
-```
+## 支持边界和更多信息
 
-示例值是合成数据，不会提交。私密工件以本机明文保存在 `.project-state/secrets/`；请保护整个 `.project-state` 目录。恢复后应自行检查文件和应用。工具不会重启应用。若 CLI 打印回退命令，应在同一项目根目录原样复制执行；回退范围有限，遇到无关改动时会拒绝。
+- 快照记录选定文件和元数据。部分快照会明确列出跳过层；被记录不代表可恢复。
+- Git 恢复要求处于受支持且干净的状态，并完整保护每个覆盖目标。`--force` 不能绕过不确定性，也不会移动分支引用。
+- `--only config,deps,runtime` 是受限文件恢复，不会恢复 Git、数据库行、Docker、运行中的服务或整台机器状态。
+- 只有显式运行 `snapshot --with-seed` 且存在真实 SQLite CLI 时才采集行数据。完整备份是本机私密明文。恢复只能创建缺失的数据库目标；已存在数据库或 sidecar 会被拒绝。仅 schema 快照不能恢复行数据。SQL 不会执行。
+- 哈希用于发现内容变化，不认证快照作者。文件校验成功不等于应用健康。
 
-## 支持边界
-
-- 恢复只接受通过校验的 snapshot schema v2 工件。schema v1 仅用于诊断，未知未来格式会被拒绝。
-- Git 恢复限于受支持的普通仓库、干净的 index/工作区，以及每个覆盖目标均有完整保护的情况。未提交源码、暂存改动和 untracked 文件不是通用备份对象。`--force` 不能绕过不安全或不确定状态。工具不会移动分支引用。
-- `--only config,deps,runtime` 是受限文件层恢复，不切换 Git，也不恢复数据库或 Docker 状态。
-- 只有显式使用 `snapshot --with-seed` 且有真实 SQLite CLI 时，才采集数据库行数据。发现受支持数据库但备份失败时，`--with-seed` 会失败且不发布快照代；普通快照可以继续，但会明确把数据库层标为 skipped。完整备份属于私密数据。恢复只能创建缺失目标；已有数据库或 sidecar 会被拒绝。schema-only 不恢复行数据。SQL 文本只记录、绝不执行。
-- Docker 仅记录观察结果。工具观察依赖，但不会安装或切换依赖，不启动应用，也不恢复容器、服务、卷或机器状态。
-- 私密存储是本机明文。哈希用于发现变化，不认证快照作者。
-
-参见[能力矩阵](docs/CAPABILITY-MATRIX.md)、[契约](docs/CONTRACTS.md)和[已知限制](docs/KNOWN-LIMITATIONS.md)。
+参见[能力矩阵](docs/CAPABILITY-MATRIX.md)、[公共契约](docs/CONTRACTS.md)、[已知限制](docs/KNOWN-LIMITATIONS.md)和[贡献与测试指南](CONTRIBUTING.md)。

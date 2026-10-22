@@ -1,6 +1,6 @@
 {
   "name": "project-state-snapshot",
-  "version": "1.4.0-rc.9",
+  "version": "1.4.0-rc.11",
   "description": "Record local project state, compare drift, and restore explicitly supported artifacts.",
   "bin": {
     "project-state": "bin/project-state.js"
@@ -10,12 +10,18 @@
     "lib/",
     "README.md",
     "README.zh-CN.md",
+    "scripts/demo.cjs",
+    "CONTRIBUTING.md",
+    "docs/CAPABILITY-MATRIX.md",
+    "docs/CONTRACTS.md",
+    "docs/KNOWN-LIMITATIONS.md",
     "LICENSE"
   ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "demo": "node scripts/demo.cjs",
     "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
     "check:version": "node scripts/verify-version.cjs",
     "pack:check": "node scripts/verify-pack.cjs",

@@ -32,7 +32,8 @@ try { pack = JSON.parse(result)[0]; } catch {
 const files = (pack?.files || []).map(entry => entry.path.replace(/\\/g, '/')).sort();
 const root = path.join(__dirname, '..');
 const expected = [
-  'package.json', 'LICENSE', 'README.md', 'README.zh-CN.md', 'bin/project-state.js',
+  'package.json', 'LICENSE', 'README.md', 'README.zh-CN.md', 'scripts/demo.cjs', 'CONTRIBUTING.md',
+  'docs/CAPABILITY-MATRIX.md', 'docs/CONTRACTS.md', 'docs/KNOWN-LIMITATIONS.md', 'bin/project-state.js',
   ...fs.readdirSync(path.join(root, 'lib')).filter(name => name.endsWith('.js')).map(name => `lib/${name}`),
 ].sort();
 const unexpected = files.filter(p => !expected.includes(p));

@@ -1,6 +1,6 @@
 # Current capability matrix
 
-Candidate: `1.4.0-rc.9`, contract revision 21, snapshot schema v2. This matrix describes implemented boundaries; it does not claim that every platform or application has been validated.
+Candidate: `1.4.0-rc.11`, contract revision 21, snapshot schema v2. This matrix describes implemented boundaries; it does not claim that every platform or application has been validated.
 
 | State | Record/compare | Restore | Validation boundary |
 |---|---|---|---|
@@ -22,4 +22,4 @@ Candidate: `1.4.0-rc.9`, contract revision 21, snapshot schema v2. This matrix d
 
 ## Verification status
 
-Previous Windows source/install evidence belongs to the separately registered `1.4.0-rc.5` candidate. Local clean-commit validation is recorded in the candidate evidence; remote CI and other environments remain unrun. Hosted CI, Linux/macOS recovery, other filesystems, real ACL equivalence, power-loss durability, user value and application health remain separate questions.
+The rc.11 local candidate includes CTF-01 diagnostics for the known Windows SQLite staging path limit; optional compare remains explicitly skipped and does not claim schema or row comparison. See [acceptance history and current scope](ACCEPTANCE.md). Hosted CI, Linux/macOS recovery, other filesystems, real ACL equivalence, power-loss durability, non-author user value and application health remain separate questions until verified.
