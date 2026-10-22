@@ -20,8 +20,8 @@ No user study was performed. These outcomes do not establish that a first-time u
 
 ## Final validation
 
-- Windows 11 environment, Node `v22.22.2`, npm `10.9.7`, Git from the active environment, SQLite CLI `3.54.1` at `D:\Codex Work\project-state\.tools\sqlite-3540100\sqlite3.exe`.
-- Strict mode: `REQUIRE_SQLITE_TESTS=1`; only the test process PATH was extended with Node and SQLite locations. `TEMP`, `TMP`, and `TMPDIR` were set to the short workspace-local `D:\Codex Work\project-state\t` because the restricted shell's default temp location did not permit Git fixture creation.
+- Windows 11 environment, Node `v22.22.2`, npm `10.9.7`, Git from the active environment, and the locally provisioned SQLite CLI `3.54.1`.
+- Strict mode: `REQUIRE_SQLITE_TESTS=1`; only the test process PATH was extended with the Node and SQLite directories. `TEMP`, `TMP`, and `TMPDIR` were set to a short workspace-local directory because the restricted shell's default temporary location did not permit Git fixture creation.
 - The 25 files matching `test/*.test.js` ran once each in six sequential, non-overlapping batches: **341 tests, 340 pass, 0 fail, 1 explicit skip, 0 cancelled, 0 todo**. The skip is the existing Windows symlink-capability case. Full logs and per-batch commands are in the local evidence directory.
 - Strict SQLite tests: **44/44 pass**, overlapping the full suite. Focused usability/list suite: **19/19 pass**. These are separate subsets, not additive to the full-suite total.
 - `npm run check:version`: pass (`1.4.0-rc.10`, contract rev21, schema v2). `npm run pack:check`: pass (23 allowlisted files, 0 unexpected). `npm run test:install`: pass from an offline tarball, `sourceFallback=false`; installed README links, demo, rollback-preview command, SQLite seed restore/integrity and rollback passed.
