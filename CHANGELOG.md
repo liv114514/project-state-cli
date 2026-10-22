@@ -1,3 +1,17 @@
+## 1.4.0-rc.11 — Windows live-compare diagnostics; not published
+
+- Preserve the stable SQLite staging path-limit category for optional database collection and live comparison. The CLI now explains that database metadata/row data were not collected and recommends retrying only from a verified disposable copy under a shorter local path.
+- Keep optional collection partial/skipped and explicit `--with-seed` failure semantics unchanged; no database, sidecar, or project state is moved automatically.
+- Keep contract revision 21 and snapshot schema v2 unchanged.
+
+## 1.4.0-rc.10 — usability candidate; not published
+
+- Added concise global and per-command help without changing command authorization or recovery behavior.
+- Added a disposable synthetic configuration demo that verifies A → B → A → B and executes the exact printed rollback command.
+- Clarified partial snapshots, comparison unknowns, restore previews, and inventory integrity summaries.
+- Reorganized bilingual quick starts with PowerShell and Bash examples; package contents now include the demo entry point.
+- Contract revision remains 21 and snapshot schema remains v2; this candidate is not published to npm.
+
 ## 1.4.0-rc.9 — local acceptance repair candidate; not published
 
 - Fixed Windows SQLite online backup staging paths that caused SQLite journal creation to exceed MAX_PATH; unsafe path lengths now fail before SQLite writes.

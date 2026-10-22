@@ -115,9 +115,9 @@ test('help and unknown command behave', async () => {
   const help = await cli(['help']);
   assert.strictEqual(help.status, 0);
   assert.match(help.stdout, /explicitly authorize and apply the current validated plan/i);
-  assert.match(help.stdout, /no interactive confirmation/i);
+  assert.match(help.stdout, /there is no interactive confirmation/i);
   assert.match(help.stdout, /does not reserve a snapshot generation/i);
-  assert.match(help.stdout, /may create\/release lock\/pin metadata/i);
+  assert.match(help.stdout, /may create\/release\s+lock\/pin metadata/i);
   const r = await cli(['frobnicate']);
   assert.strictEqual(r.status, 1);
   assert.ok(r.stderr.includes('Unknown command'));
@@ -138,7 +138,7 @@ test('dry-run shows the plan and changes nothing (safety step 2)', async () => {
   assert.match(r.stdout, /git: (?:attach to|detach HEAD)/, 'Git attachment/checkout plan is explicit');
   assert.ok(r.stdout.includes('package-lock.json'), 'lockfile restore in plan');
   assert.ok(r.stdout.includes('.env'), 'env restore in plan');
-  assert.ok(r.stdout.includes('Restore plan for working:'), 'read-only plan is labeled');
+  assert.ok(r.stdout.includes('PREVIEW ONLY: restore plan for "working"'), 'current plan preview is labeled and not presented as a reservation');
   // nothing actually changed
   assert.ok(!fs.existsSync(path.join(proj, '.env')));
 });
