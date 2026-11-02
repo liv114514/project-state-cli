@@ -1,6 +1,6 @@
 # Current capability matrix
 
-Candidate: `1.4.0-rc.9`, contract revision 21, snapshot schema v2. This matrix describes implemented boundaries; it does not claim that every platform or application has been validated.
+Candidate: `1.4.0-rc.15`, contract revision 25, snapshot schema v2. This matrix describes implemented boundaries; it does not claim that every platform or application has been validated.
 
 | State | Record/compare | Restore | Validation boundary |
 |---|---|---|---|
@@ -11,6 +11,8 @@ Candidate: `1.4.0-rc.9`, contract revision 21, snapshot schema v2. This matrix d
 | SQLite row data | Only with explicit `snapshot --with-seed`; consistent binary backup is private | Can create a missing target and verify schema, rows, digest, and integrity | A discovered database whose seed backup fails makes `--with-seed` fail without publishing a generation. Existing target and sidecars are refused; no general replacement |
 | Docker observations | Record selected metadata | Not restored | Containers, images, volumes and services remain external state |
 | Application health/processes | Not established | No automatic process restart | File correctness does not prove the app runs |
+| Task readiness diagnosis | Reads the current directory and named snapshot without writing state | Does not restore or authorize a write | Point-in-time only; actual commands revalidate; application health is not checked |
+| Snapshot inspection | `list --json` inventory and `show <name> [--json]` details | Does not restore, migrate, repair, or delete | Reports missing/empty/incomplete/unreadable and per-artifact integrity without artifact bytes or database rows |
 
 ## Trust and privacy
 
@@ -18,8 +20,8 @@ Candidate: `1.4.0-rc.9`, contract revision 21, snapshot schema v2. This matrix d
 - Snapshot hashes detect accidental changes. They do not authenticate who created the snapshot.
 - Schema v1 is diagnostic-only. Unknown future schemas and damaged required artifacts are refused for restore.
 - Git state that cannot be fully protected is refused even with `--force`.
-- See [contract](CONTRACTS.md), [design](DESIGN.md), and [known limitations](KNOWN-LIMITATIONS.md).
+- See the [contract](CONTRACTS.md) and [known limitations](KNOWN-LIMITATIONS.md). The full source repository also contains a design note.
 
 ## Verification status
 
-Previous Windows source/install evidence belongs to the separately registered `1.4.0-rc.5` candidate. Local clean-commit validation is recorded in the candidate evidence; remote CI and other environments remain unrun. Hosted CI, Linux/macOS recovery, other filesystems, real ACL equivalence, power-loss durability, user value and application health remain separate questions.
+The current `1.4.0-rc.15` candidate retains CTF-01 diagnostics for the known Windows SQLite staging path limit, task diagnosis, and snapshot inspection; these features do not change the snapshot schema. Hosted CI, Linux/macOS recovery, other filesystems, real ACL equivalence, power-loss durability, non-author user value, and application health remain separate questions until verified.

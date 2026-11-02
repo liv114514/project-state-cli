@@ -1,6 +1,6 @@
-# Current design summary — 1.4.0-rc.9
+# Current design summary — 1.4.0-rc.15
 
-The implementation contract is [CONTRACTS.md](CONTRACTS.md), revision 21 (public snapshot schema v2). Do not edit its fields or semantics without a versioned contract change and notice to consumers. This document summarizes the design; it does not replace the contract or platform-specific evidence. Current import validation is tracked separately from historical candidate evidence in [ACCEPTANCE.md](ACCEPTANCE.md).
+The implementation contract is [CONTRACTS.md](CONTRACTS.md), revision 25 (public snapshot schema v2). Do not edit its fields or semantics without a versioned contract change and notice to consumers. This document summarizes the design; it does not replace the contract or platform-specific evidence. Current import validation is tracked separately from historical candidate evidence in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Snapshot model
 
