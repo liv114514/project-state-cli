@@ -5,6 +5,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
 const { execFileSync, spawn, spawnSync } = require('child_process');
@@ -60,6 +61,56 @@ test('CLI distinguishes optional database omission from a failed explicit --with
   assert.match(changed.stdout, /row contents 未比较/);
   assert.doesNotMatch(changed.stdout, /CREATE TABLE|schemaFingerprint|[a-f0-9]{64}/i);
   assert.equal(await sql(proj, 'app.db', 'SELECT count(*) FROM items;'), '3', 'row count is unchanged while schema differs');
+});
+
+(HAS_SQLITE && process.platform === 'win32' ? test : test.skip)('CTF-01 live compare explains the Windows SQLite staging path limit without changing project state', async (t) => {
+  const tempBase = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-ctf01-live-'));
+  t.after(() => fs.rmSync(tempBase, { recursive: true, force: true }));
+  const expectedRootLength = 86; // matches the independent synthetic reproduction
+  const componentLength = expectedRootLength - tempBase.length - 1;
+  assert.ok(componentLength > 0, `test temp root is too long to construct the independent ${expectedRootLength}-character fixture`);
+  const proj = path.join(tempBase, 'r'.repeat(componentLength));
+  fs.mkdirSync(proj);
+  assert.equal(proj.length, expectedRootLength);
+
+  fs.writeFileSync(path.join(proj, 'app.js'), 'module.exports = 1;\n');
+  fs.writeFileSync(path.join(proj, '.gitignore'), '.project-state/\n');
+  await git(proj, ['init']);
+  await git(proj, ['add', 'app.js', '.gitignore']);
+  await git(proj, ['commit', '-m', 'synthetic CTF-01 baseline']);
+  excludeLocalFiles(proj, ['app.db']);
+  await makeDb(proj);
+  await sql(proj, 'app.db', "INSERT INTO items(name) VALUES ('CTF_PRIVATE_MARKER');");
+  assert.equal(await git(proj, ['status', '--porcelain=v1', '--untracked-files=all']), '');
+
+  const captured = await cli(proj, ['snapshot', 'path-boundary'], envWithSqlite());
+  assert.equal(captured.status, 0, `${captured.stdout}\n${captured.stderr}`);
+  const stateRoot = path.join(proj, '.project-state');
+  const stateSignature = () => {
+    const rows = [];
+    const visit = (dir, prefix = '') => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) { rows.push(`${relative}/`); visit(path.join(dir, entry.name), relative); }
+        else rows.push(`${relative}:${crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, entry.name))).digest('hex')}`);
+      }
+    };
+    visit(stateRoot);
+    return rows.sort();
+  };
+  const dbBefore = crypto.createHash('sha256').update(fs.readFileSync(path.join(proj, 'app.db'))).digest('hex');
+  const stateBefore = stateSignature();
+  const statusBefore = await git(proj, ['status', '--porcelain=v1', '--untracked-files=all']);
+  const compare = await cli(proj, ['compare', 'path-boundary'], envWithSqlite());
+  assert.equal(compare.status, 0, `${compare.stdout}\n${compare.stderr}`);
+  assert.match(compare.stdout, /Windows SQLite staging journal path limit reached/i);
+  assert.match(compare.stdout, /database metadata\/schema 未比较/);
+  assert.match(compare.stdout, /database row contents 未比较/);
+  assert.doesNotMatch(compare.stdout, /schema matches|schema changed|row contents changed|CTF_PRIVATE_MARKER|private SQLite staging path exceeds|CREATE TABLE/i);
+  assert.doesNotMatch(compare.stderr, /CTF_PRIVATE_MARKER|SQLite staging path limit.*D:\\/i);
+  assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(proj, 'app.db'))).digest('hex'), dbBefore);
+  assert.deepEqual(stateSignature(), stateBefore, 'live comparison must retain current pointer, generations, journals, and pins');
+  assert.equal(await git(proj, ['status', '--porcelain=v1', '--untracked-files=all']), statusBefore);
 });
 
 (HAS_SQLITE ? test : test.skip)('db inspection batches row counts and safely quotes unusual table names', async (t) => {

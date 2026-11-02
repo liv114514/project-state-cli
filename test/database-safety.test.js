@@ -13,7 +13,8 @@ const RestoreDb = require('../lib/restore-database');
 const Collectors = require('../lib/collectors');
 const Snapshot = require('../lib/snapshot');
 const Store = require('../lib/storage');
-const { removeTemporaryTree, HAS_SQLITE } = require('./helpers');
+const H = require('./helpers');
+const { removeTemporaryTree, HAS_SQLITE } = H;
 
 const generation = 'a'.repeat(32);
 const schema = { fingerprint: 'f'.repeat(64), tables: ['items'] };
@@ -213,7 +214,7 @@ test('collector stores SQL as private record-only and creates binary backup only
   const legacyJournalPath = `${legacyDestination}-journal`;
   if (process.platform === 'win32') {
     assert.equal(legacyJournalPath.length, 262, 'fixture reproduces the independently observed 254-character database path plus SQLite journal suffix');
-    await assert.rejects(() => DB.createConsistentBackup(root, source, legacyDestination), /Windows SQLite journal path limit/);
+    await assert.rejects(() => DB.createConsistentBackup(root, source, legacyDestination), (error) => error.code === 'ESQLITE_PATH_LIMIT' && /Windows SQLite journal path limit/.test(error.message));
     assert.equal(fs.existsSync(legacyDestination), false, 'overlong path is rejected before SQLite creates a partial backup');
   }
 
@@ -231,6 +232,28 @@ test('collector stores SQL as private record-only and creates binary backup only
 
   const privateParent = path.join(root, '.project-state', 'staging', operationId, 'priv');
   assert.deepEqual(await fsp.readdir(privateParent), [], 'collector removes its own temporary database directory');
+});
+
+(HAS_SQLITE && process.platform === 'win32' ? test : test.skip)('CLI explains a Windows SQLite staging path limit without publishing the requested seed', async (t) => {
+  const tempBase = await fsp.mkdtemp(path.join(os.tmpdir(), 'pss-seed-path-limit-'));
+  t.after(() => removeTemporaryTree(tempBase));
+  const desiredRootLength = 130;
+  const component = 'p'.repeat(Math.max(1, desiredRootLength - tempBase.length - 1));
+  const root = path.join(tempBase, component);
+  await fsp.mkdir(root, { recursive: true });
+  assert.ok(root.length >= 120, `long path fixture too short: ${root.length}`);
+  await H.setupGit(root, { '.gitignore': '.project-state/\n' });
+  H.excludeLocalFiles(root, ['app.db', 'app.db-wal', 'app.db-shm', 'app.db-journal']);
+  await H.makeDb(root);
+  const beforeRows = await H.sql(root, 'app.db', 'SELECT count(*) FROM items;');
+  const result = await H.cli(root, ['snapshot', 'long-path-seed', '--with-seed'], H.envWithSqlite());
+  assert.equal(result.status, 2, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stderr, /Windows project path exceeds the SQLite staging journal limit/);
+  assert.match(result.stderr, /verified disposable copy under a shorter local path/i);
+  assert.doesNotMatch(result.stderr, /SELECT |CREATE TABLE|PRIVATE_SQL|C:\\Users\\/i);
+  assert.equal(fs.existsSync(path.join(root, '.project-state', 'snapshots', 'long-path-seed', 'current.json')), false);
+  assert.equal(await H.sql(root, 'app.db', 'SELECT count(*) FROM items;'), beforeRows);
+  assert.equal(await H.sql(root, 'app.db', 'PRAGMA integrity_check;'), 'ok');
 });
 
 test('database collection failures keep private engine details out of public snapshot metadata', async (t) => {
@@ -271,9 +294,11 @@ test('database collection distinguishes no database from an unavailable SQLite C
   U.resolveTrustedBinary = (name, root) => name === 'sqlite3' ? null : originalResolve(name, root);
   t.after(() => { U.resolveTrustedBinary = originalResolve; });
 
-  const empty = await Collectors.collectDatabase({ root: noDatabase.root, withSeed: true, results: {}, files: [] });
-  assert.equal(empty.status, 'skipped');
-  assert.equal(empty.reason, 'No local SQLite database detected');
+  await assert.rejects(
+    () => Collectors.collectDatabase({ root: noDatabase.root, withSeed: true, results: {}, files: [] }),
+    (error) => error.code === 'EDATABASE_SEED_REQUIRED' && /no local SQLite database was detected/.test(error.message),
+    'an explicit seed request cannot silently succeed when there is no SQLite source',
+  );
 
   await fsp.writeFile(path.join(project.root, 'app.db'), 'synthetic database placeholder');
   const ordinary = await Collectors.collectDatabase({ root: project.root, withSeed: false, results: {}, files: [] });
@@ -283,6 +308,34 @@ test('database collection distinguishes no database from an unavailable SQLite C
     () => Collectors.collectDatabase({ root: project.root, withSeed: true, results: {}, files: [] }),
     (error) => error.code === 'EDATABASE_SEED_REQUIRED' && /trusted sqlite3 CLI is unavailable/.test(error.message),
   );
+});
+
+(HAS_SQLITE ? test : test.skip)('explicit seed refused by private-storage guard publishes no database generation or pin while optional capture remains partial', async (t) => {
+  const project = await tempProject();
+  t.after(project.dispose);
+  await H.setupGit(project.root, { '.gitignore': '.project-state/\n', '.env': 'SECRET_MARKER=synthetic-only\n' });
+  H.excludeLocalFiles(project.root, ['app.db', 'app.db-wal', 'app.db-shm', 'app.db-journal']);
+  await H.makeDb(project.root);
+  const beforeRows = await H.sql(project.root, 'app.db', 'SELECT count(*) FROM items;');
+
+  const optional = await H.cli(project.root, ['snapshot', 'optional-private-boundary'], H.envWithSqlite());
+  assert.equal(optional.status, 0, `${optional.stdout}\n${optional.stderr}`);
+  const partial = await Store.validateSnapshot(project.root, 'optional-private-boundary', { mode: 'diagnostic' });
+  assert.equal(partial.manifest.layers.database.status, 'skipped');
+  assert.equal(partial.artifacts.some((artifact) => artifact.layer === 'database' && artifact.kind === 'sqlite-backup'), false);
+
+  const required = await H.cli(project.root, ['snapshot', 'required-private-boundary', '--with-seed'], H.envWithSqlite());
+  assert.equal(required.status, 2, `${required.stdout}\n${required.stderr}`);
+  assert.match(required.stderr, /SQLite row data was requested, but private storage was not verified/);
+  assert.match(required.stderr, /No snapshot generation was published/);
+  assert.doesNotMatch(required.stdout, /generation .* saved/i);
+  assert.equal(fs.existsSync(path.join(project.root, '.project-state', 'snapshots', 'required-private-boundary', 'current.json')), false);
+  assert.equal(fs.existsSync(path.join(project.root, '.project-state', 'secrets', 'required-private-boundary')), false);
+  assert.equal((await Store.listPins(project.root)).some((pin) => pin.name === 'required-private-boundary'), false);
+  assert.equal(await H.sql(project.root, 'app.db', 'SELECT count(*) FROM items;'), beforeRows);
+  assert.equal(await H.sql(project.root, 'app.db', 'PRAGMA integrity_check;'), 'ok');
+  const optionalPublic = await fsp.readFile(path.join(partial.paths.publicGenerationDir, 'manifest.json'), 'utf8');
+  assert.doesNotMatch(optionalPublic, /SECRET_MARKER|synthetic-only/);
 });
 
 test('plan accepts only private v2 binary backup and validates bytes plus database metadata', async (t) => {
@@ -588,4 +641,31 @@ test('cross-process rollback compensation restores removed DB only to a still-ab
   const refused = await RestoreDb.compensateDatabaseRollback(project.root, second.plan, secondToken);
   assert.equal(refused.status, 'rollback-incomplete');
   assert.equal(await fsp.readFile(second.targetPath, 'utf8'), 'external post-rollback file');
+});
+
+test('CTF-01 classifies only the known SQLite path-limit code and keeps optional versus required seed behavior distinct', async (t) => {
+  const project = await tempProject();
+  t.after(project.dispose);
+  const marker = 'PRIVATE_SQLITE_ENGINE_MARKER C:\\private\\database.db';
+  await fsp.writeFile(path.join(project.root, 'app.db'), Buffer.from('synthetic database bytes'));
+  const before = await fsp.readFile(path.join(project.root, 'app.db'));
+  const originalResolve = U.resolveTrustedBinary;
+  const originalCollect = DB.collectSqliteFiles;
+  U.resolveTrustedBinary = (name) => name === 'sqlite3' ? { path: 'sqlite3', isScript: false } : null;
+  DB.collectSqliteFiles = async () => {
+    const error = new Error(marker);
+    error.code = 'EIO';
+    throw error;
+  };
+  t.after(() => { U.resolveTrustedBinary = originalResolve; DB.collectSqliteFiles = originalCollect; });
+
+  const optional = await Collectors.collectDatabase({ root: project.root, files: [], results: {}, withSeed: false });
+  assert.equal(optional.status, 'skipped');
+  assert.match(optional.reason, /consistent SQLite snapshot failed/);
+  assert.doesNotMatch(optional.reason, /path limit|shorter local path|PRIVATE_SQLITE_ENGINE_MARKER|C:\\private/);
+  await assert.rejects(
+    () => Collectors.collectDatabase({ root: project.root, files: [], results: {}, withSeed: true }),
+    (error) => error.code === 'EDATABASE_SEED_REQUIRED' && error.diagnosticCode !== 'ESQLITE_PATH_LIMIT' && !error.message.includes(marker),
+  );
+  assert.deepEqual(await fsp.readFile(path.join(project.root, 'app.db')), before);
 });

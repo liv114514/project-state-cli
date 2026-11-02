@@ -1,4 +1,4 @@
-# project-state contract revision 21 (snapshot schema v2)
+# project-state contract revision 25 (snapshot schema v2)
 
 Status: current implementation contract for snapshot and restore behavior. Code changes that alter fields or
 semantics require a versioned edit here and notice to every consumer before
@@ -151,8 +151,9 @@ the named windows; power-loss durability is not claimed.
   formats, missing artifacts and parse failures are `not compared`.
 - Runtime pin values are not printed. Comparisons may report present, changed,
   same, or unknown from validated file bytes.
-- `list` reports each layer as collected or skipped and counts validated
-  restorable, record-only and private artifacts. These counts do not establish
+- `list` reports each layer as collected or skipped and counts artifacts with
+  an implemented restore path, record-only artifacts and private artifacts.
+  “Supported” does not establish current environment readiness. These counts do not establish
   completeness of project state or application health.
 - Restore success identifies the file-artifact targets that were applied and
   verified. Git state verification is reported separately. The output asks the
@@ -641,3 +642,103 @@ This revision changes command/result semantics and private staging layout but
 does not change public snapshot schema v2. Snapshot-generation `state:
 complete` means the generation transaction committed; per-layer statuses
 remain authoritative for what was actually collected.
+
+## Revision 22: task-oriented read-only doctor
+
+`doctor --task config-snapshot [--json]` and
+`doctor --task config-restore --snapshot <name> [--json]` add task-specific
+readiness checks. The result JSON is schema v1, independent from snapshot
+schema v2. Text and JSON render the same sanitized result model. Valid JSON
+stdout contains one object; invalid command syntax writes a usage error to
+stderr and exits 1. Result exit codes are 0 for ready/not-applicable, 1 for a
+required issue, and 2 for a required unknown state. Legacy `doctor` without
+task options keeps its prior behavior.
+
+Task diagnosis operates only on the exact current working directory. It does
+not discover a parent project, create locks/pins/journals/generations, run
+snapshot or restore, reserve a future generation, alter Git, install tools,
+change PATH, execute project scripts, or restart a process. Restore readiness
+validates the named snapshot and current Git/config target preconditions
+without using restore dry-run. The result's structured `nextStep` is display
+metadata, never a shell command or authorization; it omits `--yes`. Actual
+commands revalidate their inputs and keep their existing authorization.
+
+The task result distinguishes `ok`, `issue`, `unknown`, and
+`not-applicable`. Required issues summarize as `blocked`; otherwise required
+unknowns summarize as `unknown`; a task with no applicable required object is
+`not-applicable`; otherwise it is `ready`. Missing snapshots, legacy
+snapshots, unsupported schema, missing/damaged artifacts, unavailable tools,
+permission problems, unsafe paths, dirty Git state, and unresolved operations
+have distinct stable reason codes. Missing optional SQLite does not block a
+config-only task. No applicable `.env`/`.env.local` is `not-applicable` for
+the config-snapshot task.
+
+Task output omits absolute paths, configuration values/key names, private
+artifact contents, database rows, SQL, host identity, raw tool stderr, and
+stack traces. JSON is local diagnostic output and is not automatically safe
+to publish. A readiness result is not write authorization, a generation
+reservation, a future-success guarantee, or application health. Read-only Git
+status checks reject effective content filters first and disable optional Git
+locks and filesystem-monitor hooks.
+
+See [task diagnosis interface](TASK-DIAGNOSTICS.md) for result fields,
+examples, and commands.
+
+## Revision 23: snapshot inventory and detail inspection
+
+`list --json` and `show <name> --json` emit one JSON object using inspection
+result schema v2, independent of snapshot schema v2. Their text forms render
+the same inspection model. `list` distinguishes a missing inventory, readable
+empty inventory, available inventory, incomplete inventory, and an unreadable
+root. Every recognized candidate is represented, including invalid, unknown,
+or incomplete entries; nonconforming directory entries are counted without
+publishing their names. A legacy v1 snapshot is visible as diagnostic-only and
+is never migrated.
+
+The `show` projection contains the proven name/generation, timestamp, kind,
+schema, layer collection status, artifact class/privacy/integrity metadata,
+and explicit limitations. It omits artifact bytes, stored paths, raw digests,
+configuration values/key names, database rows, SQL, absolute paths, private
+exceptions, host and operation-owner details. Layer metadata values are not
+serialized. An artifact's `supported` restore class means its type has an
+implemented restore path; it does not mean current environment prerequisites
+or application behavior were checked. Each result states that restore
+prerequisites are `not-checked` and application health is `not-tested`.
+
+Inventory/detail inspection is read-only. It does not write locks, pins,
+journals, snapshot generations, cleanup records, or business files, and it
+does not execute snapshot content. Exit 0 means the inventory/detail was
+reported, including explicit per-entry diagnostics; show of a missing name
+returns 1, and an unreadable/unverifiable detail returns 2. Invalid syntax
+returns 1. The bundled consumer example accepts an explicit snapshot name and
+never invokes restore. See [snapshot inspection interface](SNAPSHOT-INSPECTION.md).
+
+## Revision 24: command-scoped JSON result schema versions
+
+Task diagnosis uses result schema v1; snapshot inventory/detail use result
+schema v2. `resultSchemaVersion` is interpreted together with the `command`
+field and, for task diagnosis, the `task` field. It is not a promise that
+`doctor`, `list`, and `show` share one JSON envelope or field set. Each command
+renders text and JSON from its own single fact model; consumers must validate
+the command discriminator and required fields before using a result. Unknown
+commands, result versions, states, or required fields must stop consumer
+processing without invoking a write operation. A diagnostic result never
+authorizes restore. Inspection v2 adds per-layer private-artifact counts and
+preserves the implemented-support terminology; snapshot schema v2 is
+unchanged.
+
+## Revision 25: task readiness precedence and restore repository requirement
+
+Required issue checks summarize as `blocked` and required unknown checks
+summarize as `unknown` before a task can be classified as `not-applicable`.
+The no-applicable configuration result is valid only when project context and
+other required checks are verified; it must not hide an invalid or inaccessible
+current directory. `config-restore` requires a supported Git worktree because
+the restore operation depends on that boundary. Outside such a worktree, the
+required `git.worktree` check reports `issue` with reason code
+`GIT_REPOSITORY_REQUIRED`, and the summary is `blocked`. Actual restore still
+revalidates all inputs and authorization. Read-only Git status inspection must
+pass its `GIT_OPTIONAL_LOCKS=0` environment to the child process so it cannot
+refresh the repository index as a side effect.
+The `list` and `show` command help identifies JSON result schema v2; task doctor
+help identifies result schema v1.

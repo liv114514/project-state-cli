@@ -1,18 +1,14 @@
-# Release candidate gate — 1.4.0-rc.9
+# Release candidate gate — 1.4.0-rc.15
 
-Private local repair candidate only; not a release. Package/tool version `1.4.0-rc.9`, contract revision 21, snapshot schema v2. Local source/package upload gates passed on the isolated modified worktree. No push, remote repository creation, visibility change, Release, or npm publish is authorized or performed.
+This is an audit-fixed local candidate, not a published release. Package/tool version is `1.4.0-rc.15`; contract revision 25 corrects task-diagnosis summary precedence and requires a supported Git worktree for config-restore readiness. Task diagnosis and read-only `list --json` / `show` inspection remain available; snapshot schema v2 is unchanged. Validation must be bound to this audit copy's exact tree and package bytes; prior R3 results apply only to rc.14. Hosted CI, cross-platform, user-trial, and release approval are not implied.
 
-The prior rc.8 candidate did not pass the independent local upload gate. Its version and package-allowlist checks passed, but SQLite snapshot/installed seed restore failed and two Windows CMD tests failed. rc.9 is a separate repair candidate; its own final source, SQLite, pack and exact-tarball install results are recorded in the local handoff report and evidence bundle.
-
-| Gate | rc.9 status |
+| Gate | Current status |
 |---|---|
-| AT-01 SQLite staging and explicit seed outcome | Passed locally: strict SQLite 18/18; install package seed restore/integrity and rollback verified |
-| AT-02 Command Prompt printed rollback regression | Passed: full suite plus targeted CMD path regression; launcher quoting fixed without altering the printed rollback command |
-| AT-03 trusted `.cmd` shim with a spaced path | Targeted regression passed; marker checks establish the external shim ran and project-root shim did not |
-| Version and contract | Passed: `1.4.0-rc.9`, contract rev21, schema v2 |
-| npm allowlist and exact installed tarball | Passed: 18 files, 0 unexpected; exact tarball installed offline, no source fallback |
-| Full serial suite, strict real SQLite | Passed: 325 total / 324 pass / 0 fail / 1 explicit skip; SQLite 18/18 |
-| Hosted Actions, Node 22, Linux/macOS, ACL/filesystem matrix | Not run / unverified |
+| CTF-01 behavior | Optional compare remains skipped/unknown and explains the Windows staging path limit; explicit seed remains a required failure; no automatic path migration |
+| Task doctor | `config-snapshot` and `config-restore` share text/JSON results; checks are read-only and do not reserve a generation or authorize restore |
+| Snapshot inspection | `list --json` and `show` share validated metadata; damaged and unknown entries are explicit; content and application health are not disclosed or inferred |
+| Local source, strict SQLite and install gates | Bound to each frozen candidate commit in the local iteration record; not implied by this file alone |
+| Hosted CI and POSIX demo | Not re-run for rc.13; prior runner evidence applies only to its recorded commit and matrix |
 | Independent user trial and application health | Not run / unverified |
 
-The rc.8 WAL attempt stopped at an environment `realpath` EPERM before database collection. rc.9 has new evidence from a real SQLite process with an open writer and uncheckpointed committed data; see the local handoff report. The old independent report and logs remain unchanged. This does not establish hosted or cross-platform behavior, and does not authorize any remote or public action.
+rc.9–rc.14 evidence is historical and applies only to each recorded tree. rc.15 source validation and remaining package/install gates are recorded in the isolated full-code-review report; the rc.10 usability record is retained as history in [usability acceptance](USABILITY-ACCEPTANCE.md). The trial card is [here](USABILITY-TRIAL.md). Independent user understanding and value, ACL/filesystem variation, power-loss durability, real project data recovery and application health remain unverified. Hosted matrix results apply only to their recorded commits and runner images. No npm publish or formal Release is authorized.

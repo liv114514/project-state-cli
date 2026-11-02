@@ -53,7 +53,7 @@ test('snapshot output records runtime pin names without printing pin contents', 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('list explains per-layer collected and restorable scope', async () => {
+test('list explains per-layer collection and implemented support scope', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pss-product-list-'));
   try {
     await H.setupGit(root, { '.gitignore': '.env\n' });
@@ -64,7 +64,7 @@ test('list explains per-layer collected and restorable scope', async () => {
     assert.equal(created.status, 0, `${created.stdout}\n${created.stderr}`);
     const listed = await cli(['list']);
     assert.equal(listed.status, 0, `${listed.stdout}\n${listed.stderr}`);
-    assert.match(listed.stdout, /Layer scope: .*config=collected \(1 restorable, 1 record-only, 1 private\)/);
+    assert.match(listed.stdout, /Layer scope: .*config=collected \(1 supported, 1 record-only, 1 private\)/);
     assert.match(listed.stdout, /database=skipped/);
     assert.doesNotMatch(listed.stdout, /fake-only/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
