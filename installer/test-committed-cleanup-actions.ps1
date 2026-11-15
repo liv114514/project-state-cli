@@ -60,11 +60,11 @@ try{
     if($stateAfter.lastRecordDigest -cne $digestBefore -or (ConvertTo-Json -InputObject $quarantineBefore -Compress) -cne (ConvertTo-Json -InputObject $quarantineAfter -Compress)){throw 'Refused rollback changed the durable journal or quarantined data'}
     $resume=Invoke-Managed 'resume-committed-cleanup' @('-Action','Resume','-InstallRoot',$root,'-RuntimeRoot',$RuntimeRoot,'-TransactionId',$txId);$runs.Add($resume);$final=$resume.stdout|ConvertFrom-Json
     if($resume.exitCode -ne 0 -or $final.phase -cne 'completed' -or -not(Test-Path -LiteralPath $root -PathType Container) -or (Test-Path -LiteralPath (Join-Path $root 'state\install-receipt.json'))){throw 'Third process did not complete the committed cleanup while preserving the root boundary'}
-    $result=[ordered]@{schemaVersion=1;installerVersion='0.3.4';candidateVersion='0.1.0a49';wheelSha256=$wheelSha;uvSha256=$uvSha;transactionId=$txId;inspectPhase=$state.phase;permittedActions=$actions;rollbackExit=$rollback.exitCode;journalStableAfterRefusal=$true;quarantineStableAfterRefusal=$true;resumeExit=$resume.exitCode;finalPhase=$final.phase;runs=@($runs.ToArray());result='PASS'}
+    $result=[ordered]@{schemaVersion=1;installerVersion='0.3.5';candidateVersion='0.1.0a49';wheelSha256=$wheelSha;uvSha256=$uvSha;transactionId=$txId;inspectPhase=$state.phase;permittedActions=$actions;rollbackExit=$rollback.exitCode;journalStableAfterRefusal=$true;quarantineStableAfterRefusal=$true;resumeExit=$resume.exitCode;finalPhase=$final.phase;runs=@($runs.ToArray());result='PASS'}
     Write-Json (Join-Path $WorkRoot 'results.json') $result
     $result|ConvertTo-Json -Depth 12
 }catch{
-    $failure=[ordered]@{schemaVersion=1;installerVersion='0.3.4';candidateVersion='0.1.0a49';runs=@($runs.ToArray());result='FAIL';error=$_.Exception.Message}
+    $failure=[ordered]@{schemaVersion=1;installerVersion='0.3.5';candidateVersion='0.1.0a49';runs=@($runs.ToArray());result='FAIL';error=$_.Exception.Message}
     Write-Json (Join-Path $WorkRoot 'results.json') $failure
     throw
 }

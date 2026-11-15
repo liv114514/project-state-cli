@@ -147,7 +147,7 @@ try {
 finally {
     $passed=@($rows|Where-Object result -eq 'PASS').Count; $failed=@($rows|Where-Object result -eq 'FAIL').Count
     if ($failure -and $failed -eq 0) { $failed++ }
-    $result=[ordered]@{schemaVersion=1;candidate='project-state-python-candidate';candidateVersion=if($version){$version}else{$null};runId=$RunId;startedAt=$started.ToString('o');finishedAt=[DateTimeOffset]::Now.ToString('o');cwd=$workspace;runtimeRoot=if($runtime){$runtime}else{$null};wheelSha256=if($wheelHash){$wheelHash}else{$null};installerPrototype='0.3.4';commands=@($commands.ToArray());cases=@($rows.ToArray());pass=$passed;fail=$failed;skip=0;result=if(-not $failure -and $failed -eq 0 -and $rows.Count -ge 10){'PASS'}else{'FAIL'};failure=$failure;syntheticProject='only';sourceFallback=$false}
+    $result=[ordered]@{schemaVersion=1;candidate='project-state-python-candidate';candidateVersion=if($version){$version}else{$null};runId=$RunId;startedAt=$started.ToString('o');finishedAt=[DateTimeOffset]::Now.ToString('o');cwd=$workspace;runtimeRoot=if($runtime){$runtime}else{$null};wheelSha256=if($wheelHash){$wheelHash}else{$null};installerPrototype='0.3.5';commands=@($commands.ToArray());cases=@($rows.ToArray());pass=$passed;fail=$failed;skip=0;result=if(-not $failure -and $failed -eq 0 -and $rows.Count -ge 10){'PASS'}else{'FAIL'};failure=$failure;syntheticProject='only';sourceFallback=$false}
     [IO.File]::WriteAllText((Join-Path $evidence 'results.json'),(ConvertTo-Json $result -Depth 10)+"`n",$Utf8)
     $result|ConvertTo-Json -Depth 10
 }

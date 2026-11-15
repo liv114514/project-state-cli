@@ -268,7 +268,7 @@ try{
     Assert ($raceDone.exitCode -eq 0 -and $raceDoneValue.phase -ceq 'completed') 'fresh process did not resume after the gated recovery owner exited'
     $cases.Add([ordered]@{case='resume-vs-resume-rollback-and-upgrade-contention';status='PASS';firstRecoveryPid=$winnerPid;resumeLoserExit=$loserResume.exitCode;rollbackLoserExit=$loserRollback.exitCode;newOperationExit=$loserInstall.exitCode;thirdResumeExit=$raceDone.exitCode;onlyOneJournalAdvancer=$true})
 
-    $summary=[ordered]@{schemaVersion=1;runId=$RunId;installerVersion='0.3.4';productVersion=$ProductVersion;wheelSha256=$wheelHash;uvSha256=$uvHash;python=((& $python --version 2>&1)|Out-String).Trim();powershell=$PSVersionTable.PSVersion.ToString();cases=@($cases.ToArray());runs=@($script:Runs.ToArray());result='PASS'}
+    $summary=[ordered]@{schemaVersion=1;runId=$RunId;installerVersion='0.3.5';productVersion=$ProductVersion;wheelSha256=$wheelHash;uvSha256=$uvHash;python=((& $python --version 2>&1)|Out-String).Trim();powershell=$PSVersionTable.PSVersion.ToString();cases=@($cases.ToArray());runs=@($script:Runs.ToArray());result='PASS'}
     [IO.File]::WriteAllText((Join-Path $evidence 'results.json'),($summary|ConvertTo-Json -Depth 10),[Text.UTF8Encoding]::new($false));Write-Output ($summary|ConvertTo-Json -Depth 10 -Compress)
 } finally {
     foreach($child in @($script:Children.ToArray())){if(-not $child.Process.HasExited){try{$child.Process.Kill($true);$child.Process.WaitForExit()}catch{}}};$script:Children.Clear()

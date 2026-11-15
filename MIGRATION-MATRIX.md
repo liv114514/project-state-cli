@@ -18,7 +18,7 @@ This matrix maps the existing Python a47 implementation and the current lifecycl
 | Diagnostics | `doctor.py`, `list.py`, `show.py`, `recover.py` | none | read-only output where specified | a47 baseline preserved |
 | Prune | `prune.py` | no deletion or recovery added | diagnostic/refusal only | unavailable for deletion |
 | Hook | `hook.py` | no lifecycle added | external hook behavior preserved by boundary | unavailable |
-| Windows installer | historical `installer/install-core-prototype.ps1` | `prepare-python-runtime.ps1`, `install-managed.ps1` | isolated runtime plus versioned product environments, active shim and receipt | prototype locally exercised; not a release installer |
+| Windows installer | historical `installer/install-core-prototype.ps1` | `prepare-python-runtime.ps1`, `install-managed.ps1` | isolated runtime plus versioned product environments, active shim and receipt; protocol 0.3.5 binds staging to an owner receipt and external lease | deterministic stage checks: 15 PASS, 0 FAIL, 1 BLOCKED hardlink precondition; incomplete stages remain preserved, not automatically adopted/cleaned; not a release installer |
 | Build/receipt | `core/pyproject.toml` and historical a47 wheel | Git root and candidate docs created | source and package identities remain distinct | commit waits for verified author identity |
 
 ## Allowed dependency direction

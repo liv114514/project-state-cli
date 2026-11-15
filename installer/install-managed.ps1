@@ -1,11 +1,12 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)][ValidateSet('Install','Upgrade','Activate','Status','Rollback','Uninstall','Inspect','Resume')][string]$Action,
+    [Parameter(Mandatory=$true)][ValidateSet('Install','Upgrade','Activate','Status','Rollback','Uninstall','Inspect','Resume','InspectRuntimeStage','PublishRuntimeStage')][string]$Action,
     [Parameter(Mandatory=$true)][string]$InstallRoot,
     [Parameter(Mandatory=$true)][string]$RuntimeRoot,
     [string]$ManifestPath,
     [string]$UvPath,
     [string]$PythonCacheRoot,
+    [string]$StageRoot,
     [switch]$OfflineRuntime,
     [string]$Version,
     [string]$TransactionId
@@ -70,6 +71,21 @@ function Invoke-Child([string]$ScriptPath,[string[]]$Arguments) {
         if ($outText.Length -gt 1048576 -or $errText.Length -gt 1048576) { throw 'EINSTALL_CHILD_OUTPUT: output exceeded the capture limit; preserve transaction state' }
         return [pscustomobject]@{exitCode=[int]$process.ExitCode;stdout=$outText;stderr=$errText;pid=$process.Id}
     } finally { $process.Dispose() }
+}
+
+if ($Action -in @('InspectRuntimeStage','PublishRuntimeStage')) {
+    if (-not $StageRoot) { throw 'ERUNTIME_STAGE_ARGUMENT: -StageRoot is required for runtime stage inspection or publication' }
+    $stagePath = [IO.Path]::GetFullPath($StageRoot).TrimEnd('\')
+    if ([string]::Equals($install,$stagePath,[StringComparison]::OrdinalIgnoreCase) -or
+        $install.StartsWith($stagePath + '\',[StringComparison]::OrdinalIgnoreCase) -or
+        $stagePath.StartsWith($install + '\',[StringComparison]::OrdinalIgnoreCase)) {
+        throw 'EINSTALL_OWNERSHIP: install root and runtime stage must be separate, non-nested roots'
+    }
+    $stageAction = if ($Action -ceq 'InspectRuntimeStage') { 'InspectStage' } else { 'PublishStage' }
+    $stageResult = Invoke-Child $runtimeManager @('-Action',$stageAction,'-RuntimeRoot',$runtime,'-StageRoot',[IO.Path]::GetFullPath($StageRoot))
+    if ($stageResult.stdout) { [Console]::Out.Write($stageResult.stdout) }
+    if ($stageResult.stderr) { [Console]::Error.Write($stageResult.stderr) }
+    exit $stageResult.exitCode
 }
 
 $needsRuntime = $Action -in @('Install','Upgrade','Activate','Rollback','Resume')

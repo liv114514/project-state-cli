@@ -50,7 +50,7 @@ namespace ProjectStateInstaller {
 }
 $script:Transaction = $null
 $script:PendingInstallId = $null
-$script:InstallerVersion = '0.3.4'
+$script:InstallerVersion = '0.3.5'
 
 function Wait-InstallerTestGate([string]$Phase,[string]$ObservedPath='') {
     if(-not $EnableTestHooks -or -not $TestGateRoot -or $TestGatePhase -cne $Phase){return}
