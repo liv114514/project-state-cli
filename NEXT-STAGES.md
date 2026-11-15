@@ -1,0 +1,26 @@
+# Product lifecycle roadmap and admission gates
+
+## P0 — source and build provenance (blocked)
+
+The a49 worktree manifest and package hashes are recorded separately, but there is no commit because a verified maintainer Git identity is unavailable. Next: confirm the real author/committer identity, commit the frozen source, rebuild from a clean checkout, and compare package payload. A Git tree does not imply signed provenance, hosted CI, or publication.
+
+## P1 — Windows lifecycle (bounded synthetic checks passed; prototype limits remain)
+
+The a49 candidate adds explicit isolated cache binding and offline runtime preparation to the a48 lifecycle. On Windows PowerShell 7.6.9, the exact a49 wheel passed the fresh offline managed-wrapper install and installed command version check; empty-cache and missing-cache-path cases were refused without publishing a runtime (4/4). The exact installed wheel's serial suite ran 189 tests: 185 passed, 0 failed, 4 explicit host/reference skips, with the required read-only a38 manifest fixture bound by its SHA-256. A fresh installed-entry journey later passed 12/12 in the current non-elevated Windows session, including a synthetic project/install path with spaces and Unicode; this is not a fresh Windows profile or an independent-user trial. The full installer fault/interruption matrix remains incomplete, including authenticated abandoned-runtime-stage cleanup/adoption. The wrapper does not edit PATH. These are local synthetic results; detailed execution evidence is maintained with the candidate closeout package and is not linked as if it were part of this source tree.
+
+## P2 — multi-config recovery (implemented for the allowlist; bounded tests passed)
+
+Limit targets to `.env` and `.env.local`. Validate every source and target before writes, create one safety generation, persist one immutable multi-target plan, then journal each target intent and publication proof. Continue or reverse only identities proven to belong to the operation. Verify all selected targets at the end. Per-file replacement can expose a mixed view; atomic visibility requires application cooperation.
+
+## P3 — maintenance-window SQLite (mechanism only; no adapter selected)
+
+The live-WAL `Connection.backup` mechanism experiment passed, but it has no application maintenance fence. The state tool itself cannot provide an application-specific writer drain. Official-documentation evaluations found Gitea and Linkding require coordinated non-database state, and Miniflux documents PostgreSQL rather than SQLite; no suitable SQLite application target is selected. No application was installed and no unrelated user directories were scanned. Keep existing-database overwrite disabled. The next P3 step is to identify an explicitly disposable app with a documented stop-write/drain/close/resume lifecycle and a restore unit within the adapter boundary, then validate the contract before implementing support.
+
+## Design-only later stages
+
+- **Git write recovery:** define HEAD attachment, refs, index, tracked/untracked/ignored data and filters before implementation; start with a small protected scope, never `reset --hard` as a substitute for a safety plan.
+- **Prune:** build a reference graph from generations, pins, journals, recovery claims and install versions; plan and recheck under lock; quarantine before irreversible deletion.
+- **Hooks:** preserve external hook bytes and exit behavior; tool snapshot/log failure must not block commits; install/remove only verified owned content and do not enable by default.
+- **Linux/macOS:** begin with read-only diagnostics and package/install checks, then separately test links, permissions, locking, no-replace publication, fsync and interruption. Do not infer write support from Windows tests.
+
+No remote upload, package publication, release, or application-specific migration occurs by completing a local stage.

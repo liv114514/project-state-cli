@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>project-state · 状态台账</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+
+  <!-- Hatch = "unknown / skipped / not compared". It is never rendered as a calm "clean" state. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="4" class="hatch-line"></line>
+      </pattern>
+    </defs>
+  </svg>
+
+  <header class="masthead wrap">
+    <div class="mast-row">
+      <div class="mast-title">
+        <p class="mast-kicker">本地项目状态 · 记录　对比　预览　恢复</p>
+        <h1 class="wordmark">project-state<span>状态台账</span></h1>
+      </div>
+      <dl class="mast-meta" id="mastMeta"></dl>
+    </div>
+  </header>
+
+  <nav class="topnav" aria-label="页面分区">
+    <div class="wrap topnav-inner">
+      <ol class="nav-links" id="nav">
+        <li><a href="#summary"><span class="n">01</span>概况</a></li>
+        <li><a href="#snapshots"><span class="n">02</span>快照</a></li>
+        <li><a href="#changes"><span class="n">03</span>变化</a></li>
+        <li><a href="#diagnostics"><span class="n">04</span>诊断</a></li>
+        <li><a href="#recovery"><span class="n">05</span>恢复</a></li>
+        <li><a href="#notes"><span class="n">06</span>边界</a></li>
+      </ol>
+      <div class="nav-actions">
+        <label class="btn" title="导入 collect_data.py 生成的 JSON，或 list / show / doctor --task / recover --inspect / demo 的 JSON 输出">
+          <input type="file" id="fileInput" accept=".json,application/json" class="visually-hidden">导入 JSON
+        </label>
+        <button class="btn btn-quiet" id="resetBtn" type="button">重置</button>
+        <button class="btn btn-quiet" id="themeBtn" type="button" aria-pressed="false">深色</button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main" class="wrap">
+
+    <!-- 01 Summary: one focal statement + action queue + ledger of key figures -->
+    <section id="summary" class="lead" aria-labelledby="headline">
+      <div class="lead-main">
+        <p class="eyebrow" id="eyebrow">概况</p>
+        <h2 class="headline" id="headline"></h2>
+        <p class="standfirst" id="standfirst"></p>
+        <div class="queue">
+          <h3 class="label">待处理</h3>
+          <ol id="queue"></ol>
+        </div>
+      </div>
+      <aside class="lead-side" aria-label="关键数字">
+        <h3 class="label">关键数字</h3>
+        <dl class="figures" id="figures"></dl>
+        <p class="footnote" id="leadNote"></p>
+      </aside>
+    </section>
+
+    <!-- 02 Snapshot register -->
+    <section id="snapshots" class="sec" aria-labelledby="h-snapshots">
+      <header class="sec-head">
+        <span class="sec-no">02</span>
+        <h2 id="h-snapshots">快照</h2>
+        <p>每份快照的校验状态与六个采集层的覆盖情况。点击名称查看制品、检查项与相关命令。</p>
+        <ul class="key" aria-label="图例">
+          <li><i class="mk mk-ok"></i>已验证</li>
+          <li><i class="mk mk-bad"></i>无效 / 不完整</li>
+          <li><i class="mk mk-outline"></i>仅诊断（schema v1）</li>
+          <li><i class="mk mk-unknown"></i>无法读取</li>
+          <li><span class="key-skip">—</span>该层被跳过（不代表干净）</li>
+        </ul>
+      </header>
+      <div class="sec-body">
+        <div class="strip" id="strip" aria-label="快照时间分布"></div>
+        <div class="toolbar">
+          <label class="visually-hidden" for="search">搜索快照</label>
+          <input class="search" id="search" type="search" placeholder="搜索名称或原因码　/" autocomplete="off">
+          <div class="seg" role="group" aria-label="按状态筛选" id="stateFilter">
+            <button type="button" data-state="all" aria-pressed="true">全部</button>
+            <button type="button" data-state="verified" aria-pressed="false">已验证</button>
+            <button type="button" data-state="attention" aria-pressed="false">需处理</button>
+            <button type="button" data-state="legacy" aria-pressed="false">仅诊断</button>
+          </div>
+          <label class="visually-hidden" for="kindFilter">按类型筛选</label>
+          <select class="select" id="kindFilter">
+            <option value="all">全部类型</option>
+            <option value="named">命名</option>
+            <option value="safety">安全点</option>
+            <option value="auto">自动</option>
+            <option value="hook">钩子</option>
+          </select>
+          <span class="count" id="snapCount" aria-live="polite"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl snaps">
+            <caption class="visually-hidden">快照清单</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-key="name"><button class="th-sort" type="button" data-sort="name">名称</button></th>
+                <th scope="col" data-key="state"><button class="th-sort" type="button" data-sort="state">状态</button></th>
+                <th scope="col" data-key="createdAt" class="num"><button class="th-sort" type="button" data-sort="createdAt">创建时间</button></th>
+                <th scope="col" class="lc">Git</th>
+                <th scope="col" class="lc">依赖</th>
+                <th scope="col" class="lc">运行时</th>
+                <th scope="col" class="lc">配置</th>
+                <th scope="col" class="lc">Docker</th>
+                <th scope="col" class="lc">数据库</th>
+                <th scope="col" class="col-compact">采集层</th>
+                <th scope="col" data-key="artifacts" class="num"><button class="th-sort" type="button" data-sort="artifacts">制品</button></th>
+                <th scope="col" class="num c-sub">可恢复</th>
+                <th scope="col" class="num c-sub">私有</th>
+              </tr>
+            </thead>
+            <tbody id="snapRows"></tbody>
+            <tfoot id="snapFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 Changes -->
+    <section id="changes" class="sec" aria-labelledby="h-changes">
+      <header class="sec-head">
+        <span class="sec-no">03</span>
+        <h2 id="h-changes">变化</h2>
+        <p>解析 <code>project-state compare</code> 的输出。私有值、包名与摘要由工具隐藏，本页不会还原。</p>
+        <ul class="key key-sym" aria-label="符号说明">
+          <li><b class="s-same">=</b>一致</li>
+          <li><b class="s-changed">~</b>有变化</li>
+          <li><b>+</b>仅在 B</li>
+          <li><b>−</b>仅在 A</li>
+          <li><b class="s-alert">!</b>内部不一致</li>
+          <li><b class="s-unknown">?</b>未比较</li>
+        </ul>
+      </header>
+      <div class="sec-body">
+        <div class="cmp">
+          <ol class="cmp-index" id="cmpIndex" aria-label="对比列表"></ol>
+          <div class="cmp-view" id="cmpView"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 Diagnostics -->
+    <section id="diagnostics" class="sec" aria-labelledby="h-diag">
+      <header class="sec-head">
+        <span class="sec-no">04</span>
+        <h2 id="h-diag">诊断</h2>
+        <p>只读检查：工具可用性、Git 工作区、依赖同步与配置键名。任务就绪度是某一时刻的观察，不构成写入授权。</p>
+      </header>
+      <div class="sec-body">
+        <div class="doc-grid">
+          <div id="docGeneral"></div>
+          <div id="docTasks"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 Recovery operations -->
+    <section id="recovery" class="sec" aria-labelledby="h-rec">
+      <header class="sec-head">
+        <span class="sec-no">05</span>
+        <h2 id="h-rec">恢复操作</h2>
+        <p>来自 <code>recover &lt;id&gt; --inspect</code>。每次恢复先建立安全快照、写入追加式日志，并可验证回滚。本页只读，不执行任何恢复动作。</p>
+      </header>
+      <div class="sec-body" id="ops"></div>
+    </section>
+
+    <!-- 06 Boundaries -->
+    <section id="notes" class="sec" aria-labelledby="h-notes">
+      <header class="sec-head">
+        <span class="sec-no">06</span>
+        <h2 id="h-notes">能力边界</h2>
+        <p>工具明确声明的未支持或未验证范围。本页不会把它们显示为“通过”。</p>
+      </header>
+      <div class="sec-body">
+        <ol class="notes" id="notesList"></ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon wrap">
+    <p>project-state dashboard　纯静态、零依赖、只读。页面不会调用任何会写入项目的命令；所有复制出的命令需要人工审阅后执行。</p>
+  </footer>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-scrim" data-close></div>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" tabindex="-1">
+      <button class="btn btn-quiet drawer-close" type="button" data-close>关闭</button>
+      <div id="drawerBody"></div>
+    </div>
+  </aside>
+
+  <div class="tooltip" id="tooltip" role="tooltip"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="drop-hint" id="dropHint">松开以导入 JSON</div>
+
+  <script src="data/sample-data.js"></script>
+  <!-- Optional: generated by tools/collect_data.py; a missing file is fine. -->
+  <script src="data/live-data.js" onerror="void 0"></script>
+  <script src="app.js"></script>
+</body>
+</html>
