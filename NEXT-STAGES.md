@@ -2,7 +2,7 @@
 
 ## P0 — source and build provenance (local gate passed; unsigned)
 
-The 142-file a49 candidate is frozen in local commit 5033ff6d00e6b46852be33f2ab103352d28995a1, tree 55b24dd258b022d7b716821ecf800da89b9acfb6. Its source manifest aggregate is 62912ff4933f668b713da8750347e689ded5ddfdc8fd7b63a0ce4e1c08cc5025. An offline clean build from that exact tree installed in a fresh venv; CLI version/help/module-origin checks passed and all 66 wheel members matched the registered a49 wheel. The commit is unsigned and local only; this is not hosted CI, push, or publication.
+The a49 candidate has an auditable local Git commit and a 142-file byte manifest. A clean archive of the committed tree was rebuilt offline; fresh-venv installation and CLI version/help/module-origin checks passed, and all wheel payload members matched the registered a49 wheel. The current commit, tree, source manifest and build evidence are recorded in the local candidate identity and closeout materials. This is an unsigned local commit, not hosted CI, push, or publication.
 
 ## P1 — Windows lifecycle (bounded synthetic checks passed; prototype limits remain)
 
