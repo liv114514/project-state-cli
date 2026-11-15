@@ -7,6 +7,7 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
+$suiteStartedAt=[DateTimeOffset]::UtcNow.ToString('o')
 $here=$PSScriptRoot
 $workspace=(Resolve-Path (Join-Path $here '..\..')).Path
 $sandbox=Join-Path (Split-Path -Parent $workspace) ('.installer-lifecycle-'+$RunId)
@@ -264,7 +265,7 @@ try{
 
     Assert (-not(Test-Path -LiteralPath $pythonInjectionMarker)) 'a Python cwd/environment import sentinel executed during lifecycle, Resume, rollback, or activation'
     $results.Add([ordered]@{case='python-import-isolation-across-lifecycle-resume-rollback';status='PASS';cwdPackageAndCliPresent=$true;fakePythonPath=$true;invalidPythonHome=$true;userSiteMarkerPresent=$true;injectionMarkerAbsent=$true})
-    $summary=[ordered]@{schemaVersion=1;runId=$RunId;candidateVersion=$baseVersion;installerVersion='0.3.5';startedAt=(Get-Date).ToUniversalTime().ToString('o');powershell=$PSVersionTable.PSVersion.ToString();python=((& $python --version 2>&1)|Out-String).Trim();uv=((& $uv --version 2>&1)|Out-String).Trim();wheelSha256=$wheelHash;cases=@($results);totals=@{pass=$results.Count;fail=0;skip=0};result='PASS';endedAt=(Get-Date).ToUniversalTime().ToString('o')}
+    $summary=[ordered]@{schemaVersion=1;runId=$RunId;candidateVersion=$baseVersion;installerVersion='0.3.5';startedAt=$suiteStartedAt;powershell=$PSVersionTable.PSVersion.ToString();python=((& $python --version 2>&1)|Out-String).Trim();uv=((& $uv --version 2>&1)|Out-String).Trim();wheelSha256=$wheelHash;cases=@($results);totals=@{pass=$results.Count;fail=0;skip=0};result='PASS';endedAt=[DateTimeOffset]::UtcNow.ToString('o')}
     [IO.File]::WriteAllText((Join-Path $evidence 'results.json'),($summary|ConvertTo-Json -Depth 12),[Text.UTF8Encoding]::new($false))
     $summary|ConvertTo-Json -Depth 12
 }catch{
